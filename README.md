@@ -38,6 +38,14 @@ npm run build
 # 出力ディレクトリ: dist
 ```
 
+## Cloudflare 自動デプロイ（Workers Static Assets）
+
+`wrangler.jsonc` 設定済みのため、Cloudflare ダッシュボードで GitHub リポジトリを連携するだけで `main` への `git push` ごとに自動公開されます。
+
+1. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Import a repository**
+2. `shien/KuinaTechLab` を選択
+3. **Build command** に `npm run build`、**Deploy command** に `npx wrangler deploy` を設定して **Deploy**
+
 ## 新作ゲームの追加方法
 1. `games/<ゲーム名>/` フォルダを作り、`index.html` などを配置します（画像や音声フォルダもそのまま置けます）。
 2. `src/data/games.json` の `games` に1件追加します（`"bundle": { "sourceDir": "games/<ゲーム名>" }` だけでフォルダ丸ごと自動コピーされます）。
