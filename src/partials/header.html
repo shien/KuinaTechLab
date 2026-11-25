@@ -5,13 +5,15 @@
 
 <header class="site-header">
   <div class="container header-inner">
-    <a class="brand-link" href="{{root}}index.html" aria-label="{{brand}} Home">
-      <span class="brand-mark" aria-hidden="true">{{brandMark}}</span>
-      <span class="brand-text">
-        <span class="brand-name">{{brand}}</span>
-        <span class="brand-sub mono">{{brandSub}}</span>
-      </span>
-    </a>
+    <div class="header-brand-row">
+      <a class="brand-link" href="{{root}}index.html" aria-label="{{brand}} Home">
+        <span class="brand-mark" aria-hidden="true">{{brandMark}}</span>
+        <span class="brand-text">
+          <span class="brand-name">{{brand}}</span>
+          <span class="brand-sub mono">{{brandSub}}</span>
+        </span>
+      </a>
+    </div>
 
     <nav class="site-nav" aria-label="Primary navigation">
       <a class="nav-link is-active" href="{{root}}index.html#game-center">
@@ -24,12 +26,5 @@
         <span>About</span>
       </a>
     </nav>
-
-    <div class="header-actions">
-      <div class="lang-switch" role="group" aria-label="Language">
-        <button type="button" class="lang-btn is-active" data-set-lang="ja" aria-pressed="true">JP</button>
-        <button type="button" class="lang-btn" data-set-lang="en" aria-pressed="false">EN</button>
-      </div>
-    </div>
   </div>
 </header>
