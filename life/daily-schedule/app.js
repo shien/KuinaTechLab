@@ -4,6 +4,9 @@
   const { ACTIVITIES, PERIODS, PRESETS, getActivityById } = global.DailyScheduleData;
 
   const STORAGE_KEY = 'kuina_daily_schedule_v1';
+  const ROOM_STORAGE_KEY = 'kuina_daily_schedule_room_v1';
+  const ROOM_ID_RE = /^[A-Za-z0-9_-]{10,48}$/;
+  const POLL_INTERVAL_MS = 8000;
 
   const dom = {
     liveClock: document.getElementById('liveClock'),
@@ -39,7 +42,24 @@
     btnPrint: document.getElementById('btnPrint'),
     btnLoadPreset: document.getElementById('btnLoadPreset'),
     btnClearAll: document.getElementById('btnClearAll'),
-    toastBanner: document.getElementById('toastBanner')
+    toastBanner: document.getElementById('toastBanner'),
+
+    // Sync UI
+    btnSyncOpen: document.getElementById('btnSyncOpen'),
+    syncBtnLabel: document.getElementById('syncBtnLabel'),
+    syncModal: document.getElementById('syncModal'),
+    syncSetupView: document.getElementById('syncSetupView'),
+    syncActiveView: document.getElementById('syncActiveView'),
+    btnCreateFamily: document.getElementById('btnCreateFamily'),
+    joinFamilyForm: document.getElementById('joinFamilyForm'),
+    joinFamilyInput: document.getElementById('joinFamilyInput'),
+    syncLastText: document.getElementById('syncLastText'),
+    syncEditUrl: document.getElementById('syncEditUrl'),
+    syncKidUrl: document.getElementById('syncKidUrl'),
+    btnCopyEditUrl: document.getElementById('btnCopyEditUrl'),
+    btnCopyKidUrl: document.getElementById('btnCopyKidUrl'),
+    btnSyncNow: document.getElementById('btnSyncNow'),
+    btnLeaveFamily: document.getElementById('btnLeaveFamily')
   };
 
   let uidSeq = 1;
@@ -97,6 +117,11 @@
       weekday: clonePreset('weekday'),
       holiday: clonePreset('holiday')
     },
+    roomId: null,
+    cloudUpdatedAt: 0,
+    cloudSaving: false,
+    cloudSaveTimer: null,
+    pollTimer: null,
     toastTimer: null
   };
 
@@ -119,7 +144,7 @@
     } catch (_) {}
   }
 
-  function saveStorage() {
+  function saveStorage(skipCloudPush) {
     try {
       localStorage.setItem(
         STORAGE_KEY,
@@ -129,6 +154,239 @@
         })
       );
     } catch (_) {}
+
+    if (!skipCloudPush && state.roomId) {
+      scheduleCloudPush();
+    }
+  }
+
+  // ---- Family Cloud Sync (Cloudflare Workers + Durable Objects) ----
+  function buildShareUrl(roomId, kidMode) {
+    const u = new URL(window.location.href);
+    u.search = '';
+    u.hash = '';
+    u.searchParams.set('family', roomId);
+    if (kidMode) u.searchParams.set('mode', 'kid');
+    return u.toString();
+  }
+
+  function updateBrowserUrlRoom(roomId) {
+    try {
+      const u = new URL(window.location.href);
+      if (roomId) {
+        u.searchParams.set('family', roomId);
+      } else {
+        u.searchParams.delete('family');
+      }
+      window.history.replaceState({}, '', u.toString());
+    } catch (_) {}
+  }
+
+  function persistRoomId(roomId) {
+    state.roomId = roomId || null;
+    try {
+      if (roomId) {
+        localStorage.setItem(ROOM_STORAGE_KEY, roomId);
+      } else {
+        localStorage.removeItem(ROOM_STORAGE_KEY);
+      }
+    } catch (_) {}
+    updateBrowserUrlRoom(state.roomId);
+    updateSyncUI();
+  }
+
+  function formatSyncTimestamp(ts) {
+    if (!ts) return '自動保存オン';
+    const d = new Date(ts);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return 'さいごの同期 ' + hh + ':' + mm + ':' + ss;
+  }
+
+  function updateSyncUI() {
+    if (!dom.btnSyncOpen) return;
+    const active = Boolean(state.roomId);
+    dom.btnSyncOpen.classList.toggle('is-synced', active && !state.cloudSaving);
+    dom.btnSyncOpen.classList.toggle('is-saving', active && state.cloudSaving);
+
+    if (!active) {
+      dom.syncBtnLabel.textContent = '☁️ かぞく同期';
+    } else if (state.cloudSaving) {
+      dom.syncBtnLabel.textContent = '☁️ 保存中...';
+    } else {
+      dom.syncBtnLabel.textContent = '☁️ 同期中';
+    }
+
+    dom.syncSetupView.classList.toggle('hidden', active);
+    dom.syncActiveView.classList.toggle('hidden', !active);
+    if (active) {
+      dom.syncEditUrl.value = buildShareUrl(state.roomId, false);
+      dom.syncKidUrl.value = buildShareUrl(state.roomId, true);
+      dom.syncLastText.textContent = state.cloudSaving
+        ? 'クラウドへ保存中...'
+        : formatSyncTimestamp(state.cloudUpdatedAt);
+    }
+  }
+
+  function scheduleCloudPush() {
+    if (!state.roomId) return;
+    state.cloudSaving = true;
+    updateSyncUI();
+    if (state.cloudSaveTimer) clearTimeout(state.cloudSaveTimer);
+    state.cloudSaveTimer = setTimeout(function () {
+      state.cloudSaveTimer = null;
+      pushToCloud();
+    }, 450);
+  }
+
+  async function pushToCloud() {
+    if (!state.roomId) return;
+    try {
+      const res = await fetch('/api/schedule/' + encodeURIComponent(state.roomId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slot: state.slot,
+          schedules: state.schedules
+        })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (data && data.updatedAt) {
+        state.cloudUpdatedAt = Number(data.updatedAt) || Date.now();
+      }
+    } catch (_) {
+      showToast('クラウド保存に失敗しました（端末には保存済み）');
+    } finally {
+      state.cloudSaving = false;
+      updateSyncUI();
+    }
+  }
+
+  async function pullFromCloud(showFeedback) {
+    if (!state.roomId || state.cloudSaving || state.cloudSaveTimer) return false;
+    try {
+      const res = await fetch('/api/schedule/' + encodeURIComponent(state.roomId), {
+        cache: 'no-store'
+      });
+      if (res.status === 404) {
+        if (showFeedback) showToast('指定されたかぞく予定表が見つかりませんでした');
+        return false;
+      }
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const serverTs = Number(data.updatedAt) || 0;
+      if (serverTs > state.cloudUpdatedAt || showFeedback) {
+        state.cloudUpdatedAt = serverTs;
+        if (data.schedules && typeof data.schedules === 'object') {
+          if (Array.isArray(data.schedules.weekday)) {
+            state.schedules.weekday = data.schedules.weekday;
+          }
+          if (Array.isArray(data.schedules.holiday)) {
+            state.schedules.holiday = data.schedules.holiday;
+          }
+        }
+        if (data.slot === 'weekday' || data.slot === 'holiday') {
+          state.slot = data.slot;
+          document.querySelectorAll('[data-slot]').forEach(function (btn) {
+            const active = btn.getAttribute('data-slot') === state.slot;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-pressed', String(active));
+          });
+        }
+        saveStorage(true);
+        renderBoard();
+        updateSyncUI();
+        if (showFeedback) showToast('クラウドから最新の予定表を読み込みました');
+      }
+      return true;
+    } catch (_) {
+      if (showFeedback) showToast('同期サーバーに接続できませんでした');
+      return false;
+    }
+  }
+
+  async function createFamilyRoom() {
+    dom.btnCreateFamily.disabled = true;
+    try {
+      const res = await fetch('/api/schedule/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slot: state.slot,
+          schedules: state.schedules
+        })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (!data || !data.roomId) throw new Error('invalid_response');
+      state.cloudUpdatedAt = Number(data.updatedAt) || Date.now();
+      persistRoomId(data.roomId);
+      startPolling();
+      showToast('かぞく専用URLを発行しました！');
+    } catch (_) {
+      showToast('URL発行に失敗しました。しばらくしてからお試しください');
+    } finally {
+      dom.btnCreateFamily.disabled = false;
+    }
+  }
+
+  function extractRoomIdFromInput(raw) {
+    const trimmed = String(raw || '').trim();
+    if (!trimmed) return null;
+    if (ROOM_ID_RE.test(trimmed)) return trimmed;
+    try {
+      const parsed = new URL(trimmed);
+      const fam = parsed.searchParams.get('family');
+      if (fam && ROOM_ID_RE.test(fam)) return fam;
+    } catch (_) {}
+    const m = trimmed.match(/family=([A-Za-z0-9_-]{10,48})/);
+    return m ? m[1] : null;
+  }
+
+  async function copyText(text, okMsg) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const tmp = document.createElement('textarea');
+        tmp.value = text;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        document.body.removeChild(tmp);
+      }
+      showToast(okMsg);
+    } catch (_) {
+      showToast('コピーできませんでした。URLを選択してコピーしてください');
+    }
+  }
+
+  function startPolling() {
+    if (state.pollTimer) clearInterval(state.pollTimer);
+    if (!state.roomId) return;
+    state.pollTimer = setInterval(function () {
+      if (!document.hidden && state.roomId) {
+        pullFromCloud(false);
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  function stopPolling() {
+    if (state.pollTimer) {
+      clearInterval(state.pollTimer);
+      state.pollTimer = null;
+    }
+  }
+
+  function openSyncModal() {
+    updateSyncUI();
+    dom.syncModal.classList.remove('hidden');
+  }
+
+  function closeSyncModal() {
+    dom.syncModal.classList.add('hidden');
   }
 
   function currentList() {
@@ -625,6 +883,67 @@
       renderBoard();
       showToast('よてい を すべて けしました');
     });
+
+    // Family Sync Modal Events
+    dom.btnSyncOpen.addEventListener('click', openSyncModal);
+    dom.syncModal.querySelectorAll('[data-close-sync]').forEach(function (el) {
+      el.addEventListener('click', closeSyncModal);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !dom.syncModal.classList.contains('hidden')) {
+        closeSyncModal();
+      }
+    });
+
+    dom.btnCreateFamily.addEventListener('click', createFamilyRoom);
+
+    dom.joinFamilyForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const id = extractRoomIdFromInput(dom.joinFamilyInput.value);
+      if (!id) {
+        showToast('かぞく専用URL または コードを確認してください');
+        return;
+      }
+      state.cloudUpdatedAt = 0;
+      persistRoomId(id);
+      const ok = await pullFromCloud(true);
+      if (ok) {
+        dom.joinFamilyInput.value = '';
+        startPolling();
+      } else {
+        persistRoomId(null);
+      }
+    });
+
+    dom.btnCopyEditUrl.addEventListener('click', function () {
+      copyText(dom.syncEditUrl.value, '親用URLをコピーしました！');
+    });
+
+    dom.btnCopyKidUrl.addEventListener('click', function () {
+      copyText(dom.syncKidUrl.value, '子ども用（みる専用）URLをコピーしました！');
+    });
+
+    dom.btnSyncNow.addEventListener('click', function () {
+      pullFromCloud(true);
+    });
+
+    dom.btnLeaveFamily.addEventListener('click', function () {
+      stopPolling();
+      if (state.cloudSaveTimer) {
+        clearTimeout(state.cloudSaveTimer);
+        state.cloudSaveTimer = null;
+      }
+      state.cloudSaving = false;
+      state.cloudUpdatedAt = 0;
+      persistRoomId(null);
+      showToast('この端末だけの保存にもどしました');
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && state.roomId) {
+        pullFromCloud(false);
+      }
+    });
   }
 
   function bootstrap() {
@@ -632,10 +951,35 @@
     populateCustomIcons();
     updateClock();
     setInterval(updateClock, 15000);
+
+    const params = new URLSearchParams(window.location.search);
+    const initialMode = params.get('mode') === 'kid' ? 'kid' : 'edit';
+    const urlFamily = params.get('family');
+    let savedRoom = null;
+    try {
+      savedRoom = localStorage.getItem(ROOM_STORAGE_KEY);
+    } catch (_) {}
+
+    const activeRoom =
+      urlFamily && ROOM_ID_RE.test(urlFamily)
+        ? urlFamily
+        : savedRoom && ROOM_ID_RE.test(savedRoom)
+          ? savedRoom
+          : null;
+
     setSlot(state.slot);
-    setMode('edit');
+    setMode(initialMode);
     renderPicker();
     initEvents();
+
+    if (activeRoom) {
+      persistRoomId(activeRoom);
+      pullFromCloud(false).then(function () {
+        startPolling();
+      });
+    } else {
+      updateSyncUI();
+    }
   }
 
   window.addEventListener('DOMContentLoaded', bootstrap);

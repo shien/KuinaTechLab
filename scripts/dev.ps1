@@ -34,10 +34,22 @@ $mimeTypes = @{
 
 $statusPhrases = @{
   200 = 'OK'
+  201 = 'Created'
   400 = 'Bad Request'
   403 = 'Forbidden'
   404 = 'Not Found'
   405 = 'Method Not Allowed'
+  413 = 'Payload Too Large'
+}
+
+# Local in-memory store mirroring Cloudflare Durable Objects (/api/schedule/*)
+$localRooms = @{}
+
+function New-LocalRoomId {
+  $bytes = New-Object byte[] 12
+  $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+  try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
+  return [Convert]::ToBase64String($bytes).Replace('+','-').Replace('/','_').TrimEnd('=')
 }
 
 function Get-SourceStamp([string[]]$Roots) {
@@ -88,17 +100,50 @@ try {
         $client.ReceiveTimeout = 3000
         $client.SendTimeout = 5000
         $stream = $client.GetStream()
-        $reader = New-Object System.IO.StreamReader($stream, [System.Text.Encoding]::ASCII, $false, 1024, $true)
-        $requestLine = $reader.ReadLine()
+        $ms = New-Object System.IO.MemoryStream
+        $tmp = New-Object byte[] 4096
+        $headerEnd = -1
+        while ($headerEnd -lt 0) {
+          $n = $stream.Read($tmp, 0, $tmp.Length)
+          if ($n -le 0) { break }
+          $ms.Write($tmp, 0, $n)
+          $allBytes = $ms.ToArray()
+          for ($k = 0; $k -le $allBytes.Length - 4; $k++) {
+            if ($allBytes[$k] -eq 13 -and $allBytes[$k+1] -eq 10 -and $allBytes[$k+2] -eq 13 -and $allBytes[$k+3] -eq 10) {
+              $headerEnd = $k
+              break
+            }
+          }
+          if ($allBytes.Length -gt 81920) { break }
+        }
 
+        if ($headerEnd -lt 0) {
+          continue
+        }
+
+        $rawBytes = $ms.ToArray()
+        $headerStr = [System.Text.Encoding]::ASCII.GetString($rawBytes, 0, $headerEnd)
+        $headerLines = $headerStr -split "`r`n"
+        $requestLine = $headerLines[0]
         if ([string]::IsNullOrWhiteSpace($requestLine)) {
           continue
         }
 
-        # Drain request headers
-        while ($true) {
-          $line = $reader.ReadLine()
-          if ([string]::IsNullOrEmpty($line)) { break }
+        $contentLength = 0
+        for ($hi = 1; $hi -lt $headerLines.Length; $hi++) {
+          if ($headerLines[$hi] -match '^Content-Length:\s*(\d+)$') {
+            $contentLength = [int]$Matches[1]
+          }
+        }
+
+        $bodyStart = $headerEnd + 4
+        if ($contentLength -gt 0 -and $contentLength -le 65536) {
+          while (($ms.Length - $bodyStart) -lt $contentLength) {
+            $n = $stream.Read($tmp, 0, $tmp.Length)
+            if ($n -le 0) { break }
+            $ms.Write($tmp, 0, $n)
+          }
+          $rawBytes = $ms.ToArray()
         }
 
         $parts = $requestLine.Split(' ')
@@ -108,15 +153,58 @@ try {
         }
 
         $method = $parts[0].ToUpperInvariant()
-        if ($method -ne 'GET' -and $method -ne 'HEAD') {
-          Send-HttpResponse $stream 405 'text/plain; charset=utf-8' ([System.Text.Encoding]::UTF8.GetBytes('Method Not Allowed')) $false
-          continue
-        }
-
         $rawTarget = $parts[1]
         $qIdx = $rawTarget.IndexOf('?')
         $pathOnly = if ($qIdx -ge 0) { $rawTarget.Substring(0, $qIdx) } else { $rawTarget }
         $reqPath = [Uri]::UnescapeDataString($pathOnly)
+
+        # Handle /api/schedule/* locally for end-to-end testing
+        if ($reqPath.StartsWith('/api/schedule')) {
+          $bodyText = ''
+          if ($contentLength -gt 0 -and ($rawBytes.Length - $bodyStart) -ge $contentLength) {
+            $bodyText = [System.Text.Encoding]::UTF8.GetString($rawBytes, $bodyStart, $contentLength)
+          }
+
+          if ($reqPath -eq '/api/schedule/create' -and $method -eq 'POST') {
+            $rid = New-LocalRoomId
+            $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            $localRooms[$rid] = @{ payload = $bodyText; updatedAt = $ts }
+            $respJson = "{`"roomId`":`"$rid`",`"updatedAt`":$ts}"
+            Send-HttpResponse $stream 201 'application/json; charset=utf-8' ([System.Text.Encoding]::UTF8.GetBytes($respJson)) $false
+            continue
+          }
+
+          if ($reqPath -match '^/api/schedule/([A-Za-z0-9_-]{10,48})$') {
+            $rid = $Matches[1]
+            if ($method -eq 'GET') {
+              if (-not $localRooms.ContainsKey($rid)) {
+                Send-HttpResponse $stream 404 'application/json; charset=utf-8' ([System.Text.Encoding]::UTF8.GetBytes('{"error":"room_not_found"}')) $false
+                continue
+              }
+              $rec = $localRooms[$rid]
+              $obj = $rec.payload | ConvertFrom-Json
+              $outObj = @{ roomId = $rid; slot = $obj.slot; schedules = $obj.schedules; updatedAt = $rec.updatedAt }
+              $json = $outObj | ConvertTo-Json -Depth 10 -Compress
+              Send-HttpResponse $stream 200 'application/json; charset=utf-8' ([System.Text.Encoding]::UTF8.GetBytes($json)) $false
+              continue
+            }
+            if ($method -eq 'PUT') {
+              $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+              $localRooms[$rid] = @{ payload = $bodyText; updatedAt = $ts }
+              $respJson = "{`"ok`":true,`"roomId`":`"$rid`",`"updatedAt`":$ts}"
+              Send-HttpResponse $stream 200 'application/json; charset=utf-8' ([System.Text.Encoding]::UTF8.GetBytes($respJson)) $false
+              continue
+            }
+          }
+
+          Send-HttpResponse $stream 404 'application/json; charset=utf-8' ([System.Text.Encoding]::UTF8.GetBytes('{"error":"not_found"}')) $false
+          continue
+        }
+
+        if ($method -ne 'GET' -and $method -ne 'HEAD') {
+          Send-HttpResponse $stream 405 'text/plain; charset=utf-8' ([System.Text.Encoding]::UTF8.GetBytes('Method Not Allowed')) $false
+          continue
+        }
 
         if ($reqPath -eq '/' -or $reqPath -eq '') {
           $reqPath = '/index.html'

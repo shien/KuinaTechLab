@@ -34,6 +34,11 @@
           <button type="button" class="seg-btn" data-mode="kid" aria-pressed="false">👀 みる</button>
           <button type="button" class="seg-btn is-active" data-mode="edit" aria-pressed="true">✏️ つくる</button>
         </div>
+
+        <button id="btnSyncOpen" type="button" class="sync-pill" aria-haspopup="dialog">
+          <span class="sync-dot" aria-hidden="true"></span>
+          <span id="syncBtnLabel">☁️ かぞく同期</span>
+        </button>
       </div>
     </header>
 
@@ -176,6 +181,71 @@
   </div>
 
   <div id="toastBanner" class="toast-banner hidden" aria-live="polite"></div>
+
+  <!-- Family Cloud Sync Modal -->
+  <div id="syncModal" class="sync-modal hidden" role="dialog" aria-modal="true" aria-labelledby="syncModalTitle">
+    <div class="sync-backdrop" data-close-sync></div>
+    <div class="sync-dialog">
+      <div class="sync-head">
+        <h2 id="syncModalTitle" class="sync-title">☁️ かぞく同期（クラウド保存）</h2>
+        <button id="btnSyncClose" type="button" class="icon-mini-btn" data-close-sync aria-label="とじる">✕</button>
+      </div>
+
+      <!-- State A: Not synced yet -->
+      <div id="syncSetupView" class="sync-body">
+        <p class="sync-desc">
+          アカウント登録なしで、<strong>親のスマホと子どものiPadを自動同期</strong>できます。<br />
+          専用のURLを発行して、もう1台の端末で開いてブックマークするだけです。
+        </p>
+
+        <button id="btnCreateFamily" type="button" class="primary-add-btn">
+          ✨ いまの予定表で「かぞく専用URL」をつくる
+        </button>
+
+        <div class="sync-divider"><span>または、発行済みのURL・コードでひらく</span></div>
+
+        <form id="joinFamilyForm" class="sync-join-form">
+          <input
+            id="joinFamilyInput"
+            type="text"
+            placeholder="かぞく専用URL または コードを貼り付け"
+            autocomplete="off"
+          />
+          <button type="submit" class="mini-btn">ひらく</button>
+        </form>
+      </div>
+
+      <!-- State B: Connected to a family room -->
+      <div id="syncActiveView" class="sync-body hidden">
+        <div class="sync-status-box">
+          <span class="sync-status-badge">● クラウド同期中</span>
+          <span id="syncLastText" class="sync-last-text">自動保存オン</span>
+        </div>
+
+        <div class="sync-url-block">
+          <label class="sync-field-label" for="syncEditUrl">親のスマホ用（編集できるURL）</label>
+          <div class="sync-copy-row">
+            <input id="syncEditUrl" type="text" readonly />
+            <button id="btnCopyEditUrl" type="button" class="mini-btn">コピー</button>
+          </div>
+        </div>
+
+        <div class="sync-url-block">
+          <label class="sync-field-label" for="syncKidUrl">子どものiPad用（「👀 みる」で開くURL）</label>
+          <div class="sync-copy-row">
+            <input id="syncKidUrl" type="text" readonly />
+            <button id="btnCopyKidUrl" type="button" class="mini-btn">コピー</button>
+          </div>
+          <p class="sync-small-note">※ 親のスマホで予定を変えると、子どものiPadにも数秒で自動反映されます。</p>
+        </div>
+
+        <div class="sync-active-actions">
+          <button id="btnSyncNow" type="button" class="mini-btn">🔄 いま同期する</button>
+          <button id="btnLeaveFamily" type="button" class="mini-btn btn-danger-soft">この端末だけに戻す</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script defer src="data.js"></script>
   <script defer src="app.js"></script>
