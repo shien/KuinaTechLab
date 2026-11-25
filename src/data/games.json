@@ -127,5 +127,34 @@
         }
       ]
     }
+  ],
+  "life": [
+    {
+      "slug": "daily-schedule",
+      "status": "playable",
+      "statusLabelJa": "つかえる",
+      "statusLabelEn": "AVAILABLE",
+      "accent": "#0fa98c",
+      "accentAlt": "#f59e0b",
+      "titleJa": "いちにちの よていひょう",
+      "titleEn": "DAILY SCHEDULE",
+      "subtitleEn": "VISUAL ROUTINE BOARD",
+      "pitchJa": "こどもの見通しをつけるための1日の生活予定表。あさ・ひる・ゆうがた別にイラストカードを選んで時間を入れ、「つぎはこれ！」をひと目で確認できます。",
+      "pitchEn": "Visual daily schedule board for kids. Pick illustrated routine cards sorted by morning, daytime, and evening with custom times and a kid-friendly check view.",
+      "tags": ["life", "kids"],
+      "tagLabels": [
+        { "id": "life", "ja": "せいかつ", "en": "Daily Life" },
+        { "id": "kids", "ja": "見通し支援", "en": "Visual Support" }
+      ],
+      "appUrl": "life/daily-schedule/index.html",
+      "bundle": {
+        "sourceDir": "life/daily-schedule"
+      },
+      "metrics": [
+        { "value": "18 CARDS", "labelJa": "イラスト行動カード", "labelEn": "Illustrated Cards" },
+        { "value": "あさ・ひる・よる", "labelJa": "時間帯おすすめ表示", "labelEn": "Time-of-Day Picker" },
+        { "value": "PRINT OK", "labelJa": "時間入力＆印刷対応", "labelEn": "Time Input & Print" }
+      ]
+    }
   ]
 }

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>いちにちの よていひょう — Kuina Tech Life</title>
+  <meta name="theme-color" content="#f5fbfe" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;800&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page-wrap">
+    <!-- Top Header -->
+    <header class="app-header no-print">
+      <div class="header-left">
+        <a class="back-link" href="../../index.html#life" title="Kuina Tech へもどる">← Kuina Tech</a>
+        <div>
+          <h1 class="app-title">いちにちの よていひょう</h1>
+          <p class="app-sub">いま・つぎ が ひと目で わかる せいかつボード</p>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="clock-pill mono" id="liveClock" aria-label="いまのじかん">--:--</div>
+
+        <div class="slot-switch" role="group" aria-label="よていひょうの きりかえ">
+          <button type="button" class="seg-btn is-active" data-slot="weekday" aria-pressed="true">がっこうの日</button>
+          <button type="button" class="seg-btn" data-slot="holiday" aria-pressed="false">おやすみの日</button>
+        </div>
+
+        <div class="mode-switch" role="group" aria-label="ひょうじモード">
+          <button type="button" class="seg-btn" data-mode="kid" aria-pressed="false">👀 みる</button>
+          <button type="button" class="seg-btn is-active" data-mode="edit" aria-pressed="true">✏️ つくる</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Print-only Title -->
+    <div class="print-only print-header">
+      <h1 id="printTitle">いちにちの よていひょう（がっこうの日）</h1>
+    </div>
+
+    <!-- Progress & Next-Up Strip -->
+    <section class="status-strip" aria-label="きょうの すすみぐあい">
+      <div class="next-callout" id="nextCallout">
+        <span class="next-tag">つぎは これ！</span>
+        <img id="nextImg" class="next-thumb" src="images/wakeup.png" alt="" />
+        <div class="next-info">
+          <span id="nextTime" class="next-time mono">07:00</span>
+          <strong id="nextLabel" class="next-label">おきる</strong>
+        </div>
+      </div>
+
+      <div class="progress-box">
+        <div class="progress-head">
+          <span class="progress-text" id="progressText">できた：0 / 0</span>
+          <div class="utility-btns no-print">
+            <button id="btnSortTime" class="mini-btn" type="button" title="じかんじゅんに ならべる">🕒 じかん順</button>
+            <button id="btnResetChecks" class="mini-btn" type="button" title="できたチェックを リセット">🔄 チェック戻す</button>
+            <button id="btnPrint" class="mini-btn" type="button" title="かみに いんさつする">🖨️ いんさつ</button>
+          </div>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div id="progressFill" class="progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Layout: Schedule Board + Quick Picker (in Edit Mode) -->
+    <div id="workspaceLayout" class="workspace-layout">
+      <!-- Schedule Board (Morning / Daytime / Evening) -->
+      <main class="schedule-board" aria-label="一日の予定リスト">
+        <section class="period-section period-morning" data-period-section="morning">
+          <div class="period-head">
+            <div class="period-title-wrap">
+              <span class="period-icon" aria-hidden="true">🌅</span>
+              <h2 class="period-title">あさ</h2>
+              <span class="period-en mono">MORNING</span>
+            </div>
+            <button type="button" class="add-here-btn no-print" data-focus-period="morning">＋ あさに たす</button>
+          </div>
+          <div class="cards-list" id="list-morning"></div>
+        </section>
+
+        <section class="period-section period-afternoon" data-period-section="afternoon">
+          <div class="period-head">
+            <div class="period-title-wrap">
+              <span class="period-icon" aria-hidden="true">☀️</span>
+              <h2 class="period-title">ひる</h2>
+              <span class="period-en mono">DAYTIME</span>
+            </div>
+            <button type="button" class="add-here-btn no-print" data-focus-period="afternoon">＋ ひるに たす</button>
+          </div>
+          <div class="cards-list" id="list-afternoon"></div>
+        </section>
+
+        <section class="period-section period-evening" data-period-section="evening">
+          <div class="period-head">
+            <div class="period-title-wrap">
+              <span class="period-icon" aria-hidden="true">🌙</span>
+              <h2 class="period-title">ゆうがた・よる</h2>
+              <span class="period-en mono">EVENING</span>
+            </div>
+            <button type="button" class="add-here-btn no-print" data-focus-period="evening">＋ ゆうがたに たす</button>
+          </div>
+          <div class="cards-list" id="list-evening"></div>
+        </section>
+      </main>
+
+      <!-- Smart Activity Picker Panel (Ordered for Morning / Afternoon / Evening) -->
+      <aside id="pickerPanel" class="picker-panel no-print" aria-label="こうどう を えらんで ついか">
+        <div class="picker-header">
+          <h2 class="picker-title">カード を たす</h2>
+          <p class="picker-hint">じかんたい を えらぶと、よくつかう カード が うえに でます</p>
+        </div>
+
+        <!-- Target Period Tabs -->
+        <div class="picker-period-tabs" role="tablist" aria-label="ついかする じかんたい">
+          <button type="button" class="period-tab is-active" data-picker-period="morning" role="tab" aria-selected="true">🌅 あさ</button>
+          <button type="button" class="period-tab" data-picker-period="afternoon" role="tab" aria-selected="false">☀️ ひる</button>
+          <button type="button" class="period-tab" data-picker-period="evening" role="tab" aria-selected="false">🌙 ゆうがた</button>
+        </div>
+
+        <!-- Optional Time Input Before Tap -->
+        <div class="picker-time-bar">
+          <label class="picker-time-label" for="pickerTimeInput">🕒 じかん（あとで かえられます）</label>
+          <div class="picker-time-controls">
+            <input id="pickerTimeInput" class="time-input" type="time" value="" />
+            <button id="btnClearPickerTime" class="mini-btn" type="button">じどう</button>
+          </div>
+        </div>
+
+        <!-- Recommended Activities for the Selected Period -->
+        <div class="picker-section-head">
+          <span id="pickerSectionTitle">🌅 あさ の おすすめ</span>
+          <button id="btnToggleAllCards" class="link-toggle" type="button">ぜんぶ みる</button>
+        </div>
+
+        <div id="pickerGrid" class="picker-grid"></div>
+
+        <!-- Custom Card Form -->
+        <details class="custom-card-box">
+          <summary class="custom-summary">＋ じゆうな よてい を つくる</summary>
+          <form id="customForm" class="custom-form">
+            <div class="custom-row">
+              <label for="customLabel">なまえ</label>
+              <input id="customLabel" type="text" maxlength="24" placeholder="れい：ピアノ、こうえん、くすり" required />
+            </div>
+            <div class="custom-row-2">
+              <div>
+                <label for="customTime">じかん</label>
+                <input id="customTime" class="time-input" type="time" />
+              </div>
+              <div>
+                <label for="customIconSelect">イラスト</label>
+                <select id="customIconSelect"></select>
+              </div>
+            </div>
+            <div class="custom-row">
+              <label for="customNote">メモ（なくてもOK）</label>
+              <input id="customNote" type="text" maxlength="30" placeholder="れい：15ぷん、ママといっしょ" />
+            </div>
+            <button type="submit" class="primary-add-btn">この よてい を たす</button>
+          </form>
+        </details>
+
+        <!-- Preset Reset -->
+        <div class="picker-footer">
+          <button id="btnLoadPreset" class="mini-btn" type="button">📋 おてほんの よてい を いれる</button>
+          <button id="btnClearAll" class="mini-btn btn-danger-soft" type="button">🗑️ ぜんぶ けす</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="toastBanner" class="toast-banner hidden" aria-live="polite"></div>
+
+  <script defer src="data.js"></script>
+  <script defer src="app.js"></script>
+</body>
+</html>

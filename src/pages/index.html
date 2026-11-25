@@ -29,6 +29,10 @@
             <span>Game Center</span>
             <span aria-hidden="true">↓</span>
           </a>
+          <a class="btn btn-lg btn-secondary" href="#life">
+            <span>Life</span>
+            <span aria-hidden="true">↓</span>
+          </a>
           <a class="btn btn-lg btn-secondary" href="#about">
             <span data-lang="ja">このサイトについて</span>
             <span data-lang="en">About This Site</span>
@@ -94,6 +98,22 @@
           <span data-lang="ja">該当するゲームはありません。フィルターを切り替えてください。</span>
           <span data-lang="en">No games match this filter. Try another category.</span>
         </p>
+      </div>
+    </section>
+
+    <!-- Life Section (Daily Tools & Family Utilities) -->
+    <section id="life" class="section section-life">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker mono">DAILY TOOLS &amp; ROUTINE</p>
+            <h2 class="section-title">Life</h2>
+          </div>
+        </div>
+
+        <div class="game-center-list">
+          {{lifeCardsHtml}}
+        </div>
       </div>
     </section>
 

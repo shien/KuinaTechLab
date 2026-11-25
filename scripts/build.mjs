@@ -48,7 +48,7 @@ fs.mkdirSync(path.join(distDir, 'assets'), { recursive: true });
 // 2. Load catalog
 const dataPath = path.join(srcDir, 'data', 'games.json');
 const rawData = readUtf8(dataPath);
-const { site, games } = JSON.parse(rawData);
+const { site, games, life = [] } = JSON.parse(rawData);
 
 // 3. Bundle CSS
 const cssBundle =
@@ -83,22 +83,31 @@ function copyRecursive(src, dest) {
   return count;
 }
 
-let copiedFiles = 0;
-for (const g of games) {
-  if (!g.bundle) continue;
-  const sourceRoot = path.resolve(siteDir, g.bundle.sourceDir);
-  const targetDir = path.join(distDir, 'games', g.slug);
+function syncBundle(entry, category) {
+  if (!entry.bundle) return 0;
+  const sourceRoot = path.resolve(siteDir, entry.bundle.sourceDir);
+  const targetDir = path.join(distDir, category, entry.slug);
   fs.mkdirSync(targetDir, { recursive: true });
-  if (Array.isArray(g.bundle.files) && g.bundle.files.length > 0) {
-    for (const f of g.bundle.files) {
+  if (Array.isArray(entry.bundle.files) && entry.bundle.files.length > 0) {
+    let count = 0;
+    for (const f of entry.bundle.files) {
       const destFile = path.join(targetDir, f);
       fs.mkdirSync(path.dirname(destFile), { recursive: true });
       fs.copyFileSync(path.join(sourceRoot, f), destFile);
-      copiedFiles++;
+      count++;
     }
-  } else {
-    copiedFiles += copyRecursive(sourceRoot, targetDir);
+    return count;
   }
+  return copyRecursive(sourceRoot, targetDir);
+}
+
+let copiedFiles = 0;
+for (const g of games) {
+  copiedFiles += syncBundle(g, 'games');
+}
+let copiedLifeFiles = 0;
+for (const it of life) {
+  copiedLifeFiles += syncBundle(it, 'life');
 }
 
 const buildTags = (tags = []) =>
@@ -205,6 +214,39 @@ const buildGameCenterCards = (allGames) =>
     })
     .join('\n');
 
+const buildLifeCards = (items = []) =>
+  items
+    .map((it) => {
+      const metricsHtml =
+        it.metrics && it.metrics.length
+          ? `<dl class="metrics-strip">${it.metrics
+              .map(
+                (m) =>
+                  `<div class="metric-item"><dt class="metric-label"><span data-lang="ja">${esc(m.labelJa)}</span><span data-lang="en">${esc(m.labelEn)}</span></dt><dd class="metric-val mono">${esc(m.value)}</dd></div>`
+              )
+              .join('')}</dl>`
+          : '';
+
+      return `<article class="game-card" style="--card-accent: ${esc(it.accent)}; --card-accent-alt: ${esc(it.accentAlt)};">
+  <div class="game-card-body">
+    <div class="game-card-info">
+      <div class="card-top">
+        <span class="status-badge is-live"><span class="pulse-dot" aria-hidden="true"></span><span data-lang="ja">${esc(it.statusLabelJa)}</span><span data-lang="en">${esc(it.statusLabelEn)}</span></span>
+        <span class="card-subtitle mono">${esc(it.subtitleEn)}</span>
+      </div>
+      <h3 class="card-title"><span data-lang="ja">${esc(it.titleJa)}</span><span data-lang="en">${esc(it.titleEn)}</span><span class="card-title-sub mono">${esc(it.titleEn)}</span></h3>
+      <p class="card-pitch"><span data-lang="ja">${esc(it.pitchJa)}</span><span data-lang="en">${esc(it.pitchEn)}</span></p>
+      <div class="tag-row">${buildTags(it.tagLabels)}</div>
+      ${metricsHtml}
+      <div class="card-actions">
+        <a class="btn btn-primary" href="./${esc(it.appUrl)}"><span data-lang="ja">よていひょう を ひらく</span><span data-lang="en">Open Schedule</span><span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </div>
+</article>`;
+    })
+    .join('\n');
+
 const buildDate = new Date().toISOString().slice(0, 10);
 const baseTokens = {
   cssHash,
@@ -231,7 +273,8 @@ writeUtf8(
     pageDescription: esc(site.heroLeadJa),
     totalGamesCount: games.length,
     playableGamesCount: games.filter((g) => g.status === 'playable').length,
-    gameCenterCardsHtml: buildGameCenterCards(games)
+    gameCenterCardsHtml: buildGameCenterCards(games),
+    lifeCardsHtml: buildLifeCards(life)
   })
 );
 
@@ -250,5 +293,5 @@ writeUtf8(path.join(distDir, 'games.json'), rawData);
 writeUtf8(path.join(distDir, '.nojekyll'), '');
 
 console.log(
-  `Build completed in ${Date.now() - t0} ms -> ${distDir} (single page, ${copiedFiles} game file(s))`
+  `Build completed in ${Date.now() - t0} ms -> ${distDir} (single page, ${copiedFiles} game file(s), ${copiedLifeFiles} life file(s))`
 );

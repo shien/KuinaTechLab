@@ -11,6 +11,7 @@ $SiteDir     = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $DistDir     = Join-Path $SiteDir 'dist'
 $SrcDir      = Join-Path $SiteDir 'src'
 $GamesDir    = Join-Path $SiteDir 'games'
+$LifeDir     = Join-Path $SiteDir 'life'
 $BuildScript = Join-Path $PSScriptRoot 'build.ps1'
 
 # Initial build
@@ -67,7 +68,7 @@ function Send-HttpResponse($Stream, [int]$StatusCode, [string]$ContentType, [byt
   $Stream.Flush()
 }
 
-$watchRoots = @($SrcDir, $GamesDir)
+$watchRoots = @($SrcDir, $GamesDir, $LifeDir)
 $lastStamp = Get-SourceStamp $watchRoots
 $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $Port)
 $listener.Start()
@@ -76,7 +77,7 @@ Write-Host ""
 Write-Host "Dev server listening at http://127.0.0.1:$Port/ (http://localhost:$Port/)"
 Write-Host "Serving static build from $DistDir"
 if (-not $NoWatch) {
-  Write-Host "Auto-rebuild enabled for src/ and games/ (Ctrl+C to stop)"
+  Write-Host "Auto-rebuild enabled for src/, games/, and life/ (Ctrl+C to stop)"
 }
 
 try {

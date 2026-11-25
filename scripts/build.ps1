@@ -75,6 +75,7 @@ $dataPath = Join-Path $SrcDir 'data\games.json'
 $catalog = (Read-Utf8 $dataPath) | ConvertFrom-Json
 $site = $catalog.site
 $games = @($catalog.games)
+$lifeItems = if ($catalog.PSObject.Properties['life'] -and $catalog.life) { @($catalog.life) } else { @() }
 
 # 3. Bundle CSS
 $cssFiles = @('tokens.css', 'base.css', 'components.css')
@@ -96,39 +97,48 @@ $jsBundle = ($jsParts -join "`n`n") + "`n"
 $jsHash = Get-ShortHash $jsBundle
 Write-Utf8 (Join-Path $DistDir 'assets\portal.js') $jsBundle
 
-# 5. Copy playable game bundles into dist/games/<slug>/ (supports whole folder or explicit file list)
+# 5. Copy playable game & life app bundles into dist/games/<slug>/ and dist/life/<slug>/
 $copiedGameFiles = 0
-foreach ($game in $games) {
-  if ($game.PSObject.Properties['bundle'] -and $game.bundle) {
-    $sourceRoot = (Resolve-Path (Join-Path $SiteDir $game.bundle.sourceDir)).Path
-    $targetDir = Join-Path $DistDir ("games\" + $game.slug)
-    New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+function Copy-Bundle($entry, [string]$CategoryDir) {
+  if (-not ($entry.PSObject.Properties['bundle'] -and $entry.bundle)) { return 0 }
+  $count = 0
+  $sourceRoot = (Resolve-Path (Join-Path $SiteDir $entry.bundle.sourceDir)).Path
+  $targetDir = Join-Path $DistDir ($CategoryDir + '\' + $entry.slug)
+  New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 
-    $hasExplicitFiles = ($game.bundle.PSObject.Properties['files'] -and $game.bundle.files -and $game.bundle.files.Count -gt 0)
-    if ($hasExplicitFiles) {
-      foreach ($file in $game.bundle.files) {
-        $srcFile = Join-Path $sourceRoot $file
-        if (-not (Test-Path $srcFile)) {
-          throw "Missing game bundle file: $srcFile"
-        }
-        $destFile = Join-Path $targetDir $file
-        $destParent = Split-Path -Parent $destFile
-        if (-not (Test-Path $destParent)) { New-Item -ItemType Directory -Path $destParent -Force | Out-Null }
-        Copy-Item -Path $srcFile -Destination $destFile -Force
-        $copiedGameFiles++
+  $hasExplicitFiles = ($entry.bundle.PSObject.Properties['files'] -and $entry.bundle.files -and $entry.bundle.files.Count -gt 0)
+  if ($hasExplicitFiles) {
+    foreach ($file in $entry.bundle.files) {
+      $srcFile = Join-Path $sourceRoot $file
+      if (-not (Test-Path $srcFile)) {
+        throw "Missing bundle file: $srcFile"
       }
-    } else {
-      $allFiles = Get-ChildItem -Path $sourceRoot -Recurse -File
-      foreach ($f in $allFiles) {
-        $rel = $f.FullName.Substring($sourceRoot.Length).TrimStart('\', '/')
-        $destFile = Join-Path $targetDir $rel
-        $destParent = Split-Path -Parent $destFile
-        if (-not (Test-Path $destParent)) { New-Item -ItemType Directory -Path $destParent -Force | Out-Null }
-        Copy-Item -Path $f.FullName -Destination $destFile -Force
-        $copiedGameFiles++
-      }
+      $destFile = Join-Path $targetDir $file
+      $destParent = Split-Path -Parent $destFile
+      if (-not (Test-Path $destParent)) { New-Item -ItemType Directory -Path $destParent -Force | Out-Null }
+      Copy-Item -Path $srcFile -Destination $destFile -Force
+      $count++
+    }
+  } else {
+    $allFiles = Get-ChildItem -Path $sourceRoot -Recurse -File
+    foreach ($f in $allFiles) {
+      $rel = $f.FullName.Substring($sourceRoot.Length).TrimStart('\', '/')
+      $destFile = Join-Path $targetDir $rel
+      $destParent = Split-Path -Parent $destFile
+      if (-not (Test-Path $destParent)) { New-Item -ItemType Directory -Path $destParent -Force | Out-Null }
+      Copy-Item -Path $f.FullName -Destination $destFile -Force
+      $count++
     }
   }
+  return $count
+}
+
+foreach ($game in $games) {
+  $copiedGameFiles += Copy-Bundle $game 'games'
+}
+$copiedLifeFiles = 0
+foreach ($item in $lifeItems) {
+  $copiedLifeFiles += Copy-Bundle $item 'life'
 }
 
 # 6. Build Game Center Cards (all inline on single page)
@@ -241,6 +251,39 @@ function Build-GameCenterCardsHtml($allGames) {
   return $sb.ToString()
 }
 
+function Build-LifeCardsHtml($items) {
+  $sb = New-Object System.Text.StringBuilder
+  foreach ($it in $items) {
+    $accent = Escape-Html $it.accent
+    $accentAlt = Escape-Html $it.accentAlt
+    $url = Escape-Html $it.appUrl
+    [void]$sb.AppendLine("<article class=`"game-card`" style=`"--card-accent: $accent; --card-accent-alt: $accentAlt;`">")
+    [void]$sb.AppendLine('  <div class="game-card-body">')
+    [void]$sb.AppendLine('    <div class="game-card-info">')
+    [void]$sb.AppendLine('      <div class="card-top">')
+    [void]$sb.AppendLine('        <span class="status-badge is-live"><span class="pulse-dot" aria-hidden="true"></span><span data-lang="ja">' + (Escape-Html $it.statusLabelJa) + '</span><span data-lang="en">' + (Escape-Html $it.statusLabelEn) + '</span></span>')
+    [void]$sb.AppendLine('        <span class="card-subtitle mono">' + (Escape-Html $it.subtitleEn) + '</span>')
+    [void]$sb.AppendLine('      </div>')
+    [void]$sb.AppendLine('      <h3 class="card-title"><span data-lang="ja">' + (Escape-Html $it.titleJa) + '</span><span data-lang="en">' + (Escape-Html $it.titleEn) + '</span><span class="card-title-sub mono">' + (Escape-Html $it.titleEn) + '</span></h3>')
+    [void]$sb.AppendLine('      <p class="card-pitch"><span data-lang="ja">' + (Escape-Html $it.pitchJa) + '</span><span data-lang="en">' + (Escape-Html $it.pitchEn) + '</span></p>')
+    [void]$sb.AppendLine('      <div class="tag-row">' + (Build-TagsHtml $it.tagLabels) + '</div>')
+    if ($it.metrics -and $it.metrics.Count -gt 0) {
+      [void]$sb.AppendLine('      <dl class="metrics-strip">')
+      foreach ($m in $it.metrics) {
+        [void]$sb.AppendLine('        <div class="metric-item"><dt class="metric-label"><span data-lang="ja">' + (Escape-Html $m.labelJa) + '</span><span data-lang="en">' + (Escape-Html $m.labelEn) + '</span></dt><dd class="metric-val mono">' + (Escape-Html $m.value) + '</dd></div>')
+      }
+      [void]$sb.AppendLine('      </dl>')
+    }
+    [void]$sb.AppendLine('      <div class="card-actions">')
+    [void]$sb.AppendLine("        <a class=`"btn btn-primary`" href=`"./$url`"><span data-lang=`"ja`">よていひょう を ひらく</span><span data-lang=`"en`">Open Schedule</span><span aria-hidden=`"true`">→</span></a>")
+    [void]$sb.AppendLine('      </div>')
+    [void]$sb.AppendLine('    </div>')
+    [void]$sb.AppendLine('  </div>')
+    [void]$sb.AppendLine('</article>')
+  }
+  return $sb.ToString()
+}
+
 # 7. Render Single Page (dist/index.html)
 $partialsDir = Join-Path $SrcDir 'partials'
 $buildDate = (Get-Date).ToString('yyyy-MM-dd')
@@ -265,6 +308,7 @@ $indexHtml = Apply-Tokens $indexRaw @{
   totalGamesCount     = $games.Count
   playableGamesCount  = $playableCount
   gameCenterCardsHtml = Build-GameCenterCardsHtml $games
+  lifeCardsHtml       = Build-LifeCardsHtml $lifeItems
 }
 Write-Utf8 (Join-Path $DistDir 'index.html') $indexHtml
 
@@ -299,4 +343,5 @@ if (-not $Quiet) {
   Write-Host "  Pages:   index.html (single page), 404.html"
   Write-Host "  Assets:  portal.css ($cssKb KB, #$cssHash), portal.js ($jsKb KB, #$jsHash)"
   Write-Host "  Games:   $copiedGameFiles playable game file(s) synced into dist/games/"
+  Write-Host "  Life:    $copiedLifeFiles life tool file(s) synced into dist/life/"
 }
