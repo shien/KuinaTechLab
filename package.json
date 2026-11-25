@@ -1,0 +1,12 @@
+{
+  "name": "kuina-tech",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Kuina Tech — Single-page near-pure HTML site with a Game Center showcase.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:win": "powershell -ExecutionPolicy Bypass -File scripts/build.ps1",
+    "dev:win": "powershell -ExecutionPolicy Bypass -File scripts/dev.ps1"
+  }
+}

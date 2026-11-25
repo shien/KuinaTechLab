@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja" data-active-lang="ja">
+<head>
+{{include:head.html}}
+</head>
+<body>
+  <div class="bg-atmosphere" aria-hidden="true">
+    <div class="bg-sun-halo"></div>
+    <div class="bg-sea-mist"></div>
+  </div>
+
+{{include:header.html}}
+
+  <main id="main-content">
+    <!-- Open Sky Hero: Kuina Tech -->
+    <section class="hero-section">
+      <div class="container hero-single">
+        <p class="hero-kicker mono">
+          <span class="hero-kicker-dot" aria-hidden="true"></span>
+          <span>{{brandSub}}</span>
+        </p>
+        <h1 class="hero-title-main">{{heroTitle}}</h1>
+        <p class="hero-lead">
+          <span data-lang="ja">{{heroLeadJa}}</span>
+          <span data-lang="en">{{heroLeadEn}}</span>
+        </p>
+        <div class="hero-cta-row">
+          <a class="btn btn-lg btn-primary" href="#game-center">
+            <span>Game Center</span>
+            <span aria-hidden="true">↓</span>
+          </a>
+          <a class="btn btn-lg btn-secondary" href="#about">
+            <span data-lang="ja">このサイトについて</span>
+            <span data-lang="en">About This Site</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gentle Abstract Horizon Curve (Sky -> Lagoon) -->
+    <div class="horizon-wave" aria-hidden="true">
+      <svg viewBox="0 0 1440 80" preserveAspectRatio="none" focusable="false">
+        <path
+          d="M0,48 C280,82 540,12 860,44 C1120,70 1300,26 1440,38 L1440,80 L0,80 Z"
+          fill="rgba(224, 246, 252, 0.72)"
+        />
+        <path
+          d="M0,58 C340,26 680,76 1040,42 C1220,24 1360,44 1440,52 L1440,80 L0,80 Z"
+          fill="rgba(232, 248, 251, 0.65)"
+        />
+      </svg>
+    </div>
+
+    <!-- Game Center Section (Lagoon & White Sand Glass Cards) -->
+    <section id="game-center" class="section section-lagoon">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker mono">PLAYABLE BROWSER GAMES</p>
+            <h2 class="section-title">Game Center</h2>
+          </div>
+
+          <div class="filter-bar" role="group" aria-label="Filter games">
+            <button type="button" class="filter-pill is-active" data-filter="all" aria-pressed="true">
+              <span data-lang="ja">すべて</span>
+              <span data-lang="en">All</span>
+              <span class="filter-count mono">{{totalGamesCount}}</span>
+            </button>
+            <button type="button" class="filter-pill" data-filter="playable" aria-pressed="false">
+              <span data-lang="ja">プレイ可能</span>
+              <span data-lang="en">Playable</span>
+              <span class="filter-count mono">{{playableGamesCount}}</span>
+            </button>
+            <button type="button" class="filter-pill" data-filter="action" aria-pressed="false">
+              <span data-lang="ja">アクション</span>
+              <span data-lang="en">Action</span>
+            </button>
+            <button type="button" class="filter-pill" data-filter="maze" aria-pressed="false">
+              <span data-lang="ja">迷路</span>
+              <span data-lang="en">Maze</span>
+            </button>
+            <button type="button" class="filter-pill" data-filter="learning" aria-pressed="false">
+              <span data-lang="ja">まなび</span>
+              <span data-lang="en">Learning</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="catalogGrid" class="game-center-list">
+          {{gameCenterCardsHtml}}
+        </div>
+
+        <p id="catalogEmpty" class="catalog-empty" hidden>
+          <span data-lang="ja">該当するゲームはありません。フィルターを切り替えてください。</span>
+          <span data-lang="en">No games match this filter. Try another category.</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- About Section (Warm Coral-Sand Tone) -->
+    <section id="about" class="section section-sand">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker mono">NEAR-PURE HTML ARCHITECTURE</p>
+            <h2 class="section-title">About Kuina Tech</h2>
+          </div>
+        </div>
+
+        <div class="arch-grid">
+          <article class="arch-card">
+            <div class="arch-step mono">01 / SIMPLE WEB</div>
+            <h3 class="arch-card-title">
+              <span data-lang="ja">ほぼ純HTMLの軽快な構成</span>
+              <span data-lang="en">Near-Pure HTML Simplicity</span>
+            </h3>
+            <p class="arch-card-desc">
+              <span data-lang="ja">重いフロントエンドフレームワークを使わず、HTML・CSS・素のJavaScriptを中心に構成。ブラウザですぐに開いて軽快に遊べます。</span>
+              <span data-lang="en">Built on clean HTML, CSS, and vanilla JavaScript with zero frontend framework bloat for fast loading and responsive gameplay.</span>
+            </p>
+          </article>
+
+          <article class="arch-card">
+            <div class="arch-step mono">02 / GAME CENTER</div>
+            <h3 class="arch-card-title">
+              <span data-lang="ja">games.json でゲームを簡単追加</span>
+              <span data-lang="en">Easy Game Center Expansion</span>
+            </h3>
+            <p class="arch-card-desc">
+              <span data-lang="ja"><code>src/data/games.json</code> に新しいゲームの情報を足してビルドするだけで、Game Center にカードとリンクが自動生成されます。</span>
+              <span data-lang="en">Add a game entry in <code>src/data/games.json</code> and rebuild to automatically publish its card and play links inside Game Center.</span>
+            </p>
+          </article>
+
+          <article class="arch-card">
+            <div class="arch-step mono">03 / BUILD TOOL</div>
+            <h3 class="arch-card-title">
+              <span data-lang="ja">1ページ静的ビルド出力</span>
+              <span data-lang="en">Single-Page Static Build</span>
+            </h3>
+            <p class="arch-card-desc">
+              <span data-lang="ja"><code>build.ps1</code>（または <code>npm run build</code>）でHTMLパーツとCSS/JSを結合し、<code>dist/</code> にそのままデプロイ可能な静的サイトを出力します。</span>
+              <span data-lang="en">Run <code>build.ps1</code> or <code>npm run build</code> to assemble partials, hashed assets, and playable game bundles into <code>dist/</code>.</span>
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+{{include:footer.html}}
+</body>
+</html>

@@ -1,0 +1,49 @@
+:root {
+  /* Okinawan Sky, Sea & White Sand Palette */
+  --sky-top: #cbeefa;
+  --sky-mid: #e6f7fc;
+  --sand-light: #fcfbf7;
+  --sand-warm: #f7f4ec;
+  --lagoon-pale: #e8f8fb;
+  --sea-deep: #0b3349;
+  --sea-abyss: #072233;
+
+  /* Surfaces */
+  --bg-card: rgba(255, 255, 255, 0.86);
+  --bg-card-hover: rgba(255, 255, 255, 0.97);
+  --bg-soft: rgba(232, 248, 251, 0.72);
+
+  /* Borders */
+  --border-subtle: rgba(11, 51, 73, 0.11);
+  --border-strong: rgba(11, 51, 73, 0.22);
+  --border-accent: rgba(0, 151, 178, 0.42);
+
+  /* Typography */
+  --text-main: #0a2a3d;
+  --text-secondary: #335568;
+  --text-muted: #58788a;
+
+  /* Ocean & Sun Accents */
+  --accent-ocean: #0092b3;
+  --accent-ocean-deep: #027594;
+  --accent-lagoon: #0fa98c;
+  --accent-sun: #e89b1e;
+  --accent-coral: #e56372;
+
+  /* Fonts */
+  --font-sans: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Layout & Radii */
+  --container-max: 1120px;
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+
+  /* Soft Sunlit Shadows */
+  --shadow-card: 0 18px 44px rgba(10, 62, 92, 0.08), 0 2px 8px rgba(10, 62, 92, 0.04);
+  --shadow-card-hover: 0 24px 54px rgba(0, 146, 179, 0.14), 0 4px 12px rgba(10, 62, 92, 0.05);
+  --shadow-btn: 0 10px 24px rgba(0, 146, 179, 0.26);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}

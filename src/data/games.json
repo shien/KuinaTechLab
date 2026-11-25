@@ -1,0 +1,131 @@
+{
+  "site": {
+    "brand": "Kuina Tech",
+    "brandMark": "KT",
+    "brandSub": "WEB LAB & GAMES",
+    "heroTitle": "Kuina Tech",
+    "heroLeadJa": "純HTML・軽量なWeb技術でつくる、すぐ遊べるブラウザゲームと実験的Webアプリのポートフォリオ。",
+    "heroLeadEn": "Playable browser games and lightweight web experiments built with near-pure HTML, CSS, and vanilla JavaScript.",
+    "author": "Kuina Tech",
+    "year": "2026"
+  },
+  "games": [
+    {
+      "slug": "meiro5sec",
+      "featured": true,
+      "status": "playable",
+      "statusLabelJa": "プレイ可能",
+      "statusLabelEn": "PLAYABLE",
+      "accent": "#38bdf8",
+      "accentAlt": "#34d399",
+      "titleJa": "5秒迷路",
+      "titleEn": "MEIRO 5SEC",
+      "subtitleEn": "SPEED MAZE ACTION",
+      "pitchJa": "制限時間5秒の迷路を一筆描きで駆け抜け、カタツムリから「光」まで12段階のランクを目指すスピード迷路ゲーム。",
+      "pitchEn": "Trace each procedural maze in one continuous stroke under a 5-second timer and climb 12 speed ranks from Snail to Speed of Light.",
+      "tags": ["action", "maze"],
+      "tagLabels": [
+        { "id": "action", "ja": "アクション", "en": "Action" },
+        { "id": "maze", "ja": "迷路", "en": "Maze" }
+      ],
+      "playUrl": "games/meiro5sec/index.html",
+      "storageKey": "meiro5_best_v1",
+      "bundle": {
+        "sourceDir": "games/meiro5sec"
+      },
+      "metrics": [
+        { "value": "5.00s", "labelJa": "制限時間", "labelEn": "Timer" },
+        { "value": "5×5→20×20", "labelJa": "自動生成", "labelEn": "Grid Size" },
+        { "value": "12 RANKS", "labelJa": "評価ランク", "labelEn": "Ranks" }
+      ],
+      "mechanics": [
+        {
+          "icon": "⏱️",
+          "titleJa": "1問5秒のカウントダウン",
+          "titleEn": "5-Second Timer",
+          "descJa": "クリアごとにグリッドが5×5から最大20×20へ拡大。時間切れで即終了。",
+          "descEn": "Grid density scales from 5×5 to 20×20 each stage. Time up ends the run."
+        },
+        {
+          "icon": "✍️",
+          "titleJa": "押しっぱなし一筆描き",
+          "titleEn": "One-Stroke Hold Control",
+          "descJa": "左クリック長押し／指タッチで S → G へ。途中で離すと線が消滅。",
+          "descEn": "Hold left-click or touch from S to G. Releasing early erases your trail."
+        },
+        {
+          "icon": "⏳",
+          "titleJa": "金バッジ（次ステージ +1〜3秒）",
+          "titleEn": "Gold Badge (Next +1–3s)",
+          "descJa": "別ルートに落ちている金バッジを取ると、次の迷路の制限時間が延長。",
+          "descEn": "Detour off the shortest path to carry bonus seconds into the next maze."
+        },
+        {
+          "icon": "◆",
+          "titleJa": "緑ダイヤ（今回時間を即時回復）",
+          "titleEn": "Green Diamond (Instant Heal)",
+          "descJa": "4問目から登場。触れると現在のタイマーがその場で回復。",
+          "descEn": "Appears from Stage 4+. Touching it restores your current timer immediately."
+        }
+      ],
+      "ranks": [
+        { "id": "snail", "minScore": 0, "name": "カタツムリ", "en": "SNAIL", "emoji": "🐌", "color": "#94A3B8" },
+        { "id": "beetle", "minScore": 160, "name": "カブトムシ", "en": "BEETLE", "emoji": "🪲", "color": "#A78BFA" },
+        { "id": "mouse", "minScore": 380, "name": "マウス", "en": "MOUSE", "emoji": "🐁", "color": "#38BDF8" },
+        { "id": "rabbit", "minScore": 700, "name": "ウサギ", "en": "RABBIT", "emoji": "🐇", "color": "#34D399" },
+        { "id": "cheetah", "minScore": 1150, "name": "チーター", "en": "CHEETAH", "emoji": "🐆", "color": "#FBBF24" },
+        { "id": "falcon", "minScore": 1700, "name": "ハヤブサ", "en": "FALCON", "emoji": "🦅", "color": "#FB923C" },
+        { "id": "ninja", "minScore": 2400, "name": "ニンジャ", "en": "NINJA", "emoji": "🥷", "color": "#F472B6" },
+        { "id": "supercomputer", "minScore": 3250, "name": "スーパーコンピュータ", "en": "SUPERCOMPUTER", "emoji": "🖥️", "color": "#60A5FA" },
+        { "id": "ai", "minScore": 4200, "name": "AI", "en": "AI", "emoji": "🤖", "color": "#2DD4BF" },
+        { "id": "quantum", "minScore": 5400, "name": "量子コンピュータ", "en": "QUANTUM", "emoji": "⚛️", "color": "#C084FC" },
+        { "id": "tachyon", "minScore": 6900, "name": "タキオン", "en": "TACHYON", "emoji": "⚡", "color": "#FDE047" },
+        { "id": "light", "minScore": 8800, "name": "光", "en": "SPEED OF LIGHT", "emoji": "✨", "color": "#0EA5E9" }
+      ]
+    },
+    {
+      "slug": "moji-nazori",
+      "featured": false,
+      "status": "playable",
+      "statusLabelJa": "プレイ可能",
+      "statusLabelEn": "PLAYABLE",
+      "accent": "#f97316",
+      "accentAlt": "#fb7185",
+      "titleJa": "もじなぞり れんしゅう",
+      "titleEn": "MOJI NAZORI",
+      "subtitleEn": "KIDS CHARACTER TRACING",
+      "pitchJa": "ポケモン・サンリオ・サンエックスユニバース・かいけつゾロリ・名探偵プリキュア！・サンサンキッズTVのキャラ名から1文字を、指やApple Pencilで大きく楽しくなぞる小学校低学年向け練習アプリ。",
+      "pitchEn": "Warm, untimed hiragana & katakana tracing practice for young learners using beloved characters, built for finger and Apple Pencil.",
+      "tags": ["learning", "kids"],
+      "tagLabels": [
+        { "id": "learning", "ja": "まなび", "en": "Learning" },
+        { "id": "kids", "ja": "キッズ向け", "en": "Kids" }
+      ],
+      "playUrl": "games/moji-nazori/index.html",
+      "bundle": {
+        "sourceDir": "games/moji-nazori"
+      },
+      "metrics": [
+        { "value": "6 SERIES", "labelJa": "収録作品", "labelEn": "Series" },
+        { "value": "ひらがな・カナ", "labelJa": "ランダム出題", "labelEn": "Random Script" },
+        { "value": "Apple Pencil", "labelJa": "筆圧・指対応", "labelEn": "Pen & Touch" }
+      ],
+      "mechanics": [
+        {
+          "icon": "🎲",
+          "titleJa": "6作品のキャラ名＋ひらがな／カタカナをランダム出題",
+          "titleEn": "6 Series + Random Hiragana / Katakana",
+          "descJa": "ひらがな出題時はキャラ名すべてがひらがな、カタカナ出題時はすべてカタカナに統一。「（作品名）より」も表示されます。",
+          "descEn": "Names automatically switch wholly to hiragana or katakana with clear '(Series) より' attribution."
+        },
+        {
+          "icon": "✏️",
+          "titleJa": "特大マス目＆Apple Pencil対応",
+          "titleEn": "Oversized Grid & Apple Pencil Support",
+          "descJa": "教科書体に近い書体（Klee One）で大きく表示。制限時間なしで、設定から「ペンだけモード」にも切り替え可能です。",
+          "descEn": "No timer. Huge textbook-inspired letter guides with pressure support and an optional Apple Pencil-only palm guard."
+        }
+      ]
+    }
+  ]
+}

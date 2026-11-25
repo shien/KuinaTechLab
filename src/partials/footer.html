@@ -1,0 +1,53 @@
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <div class="footer-logo">{{brand}}</div>
+      <p class="footer-copy">
+        <span data-lang="ja">{{heroLeadJa}}</span>
+        <span data-lang="en">{{heroLeadEn}}</span>
+      </p>
+    </div>
+    <div class="footer-meta">
+      <div class="footer-pills mono">
+        <span class="meta-pill">NEAR-PURE HTML</span>
+        <span class="meta-pill">STATIC BUILD</span>
+      </div>
+      <p class="footer-legal mono">© {{year}} {{author}} — Built {{buildDate}}</p>
+    </div>
+  </div>
+</footer>
+
+<!-- Built-in Game Player Modal -->
+<div id="arcadeModal" class="arcade-modal" role="dialog" aria-modal="true" aria-labelledby="arcadeModalTitle" hidden>
+  <div class="arcade-backdrop" data-close-arcade></div>
+  <div class="arcade-shell">
+    <div class="arcade-bar">
+      <div class="arcade-bar-left">
+        <span class="arcade-led" aria-hidden="true"></span>
+        <h2 id="arcadeModalTitle" class="arcade-title mono">Kuina Tech — Game Center</h2>
+      </div>
+      <div class="arcade-bar-actions">
+        <a id="arcadeExternalLink" class="btn btn-sm btn-ghost" href="{{root}}games/meiro5sec/index.html" target="_blank" rel="noopener noreferrer">
+          <span data-lang="ja">新しいタブで開く ↗</span>
+          <span data-lang="en">Open in New Tab ↗</span>
+        </a>
+        <button id="arcadeCloseBtn" type="button" class="btn btn-sm btn-ghost" data-close-arcade aria-label="Close game player">
+          <span>✕</span>
+          <span data-lang="ja">閉じる</span>
+          <span data-lang="en">Close</span>
+        </button>
+      </div>
+    </div>
+    <div class="arcade-stage">
+      <iframe
+        id="arcadeFrame"
+        title="Playable Game Canvas"
+        src="about:blank"
+        allow="autoplay"
+        loading="lazy"
+      ></iframe>
+    </div>
+  </div>
+</div>
+
+<script defer src="{{root}}assets/portal.js?v={{jsHash}}"></script>

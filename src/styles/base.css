@@ -1,0 +1,198 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--sand-light);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+  background: linear-gradient(
+    180deg,
+    var(--sky-top) 0%,
+    var(--sky-mid) 22%,
+    var(--sand-light) 52%,
+    var(--sand-warm) 100%
+  );
+}
+
+/* Instant Zero-Flicker Bilingual Toggle */
+html[data-active-lang='ja'] [data-lang='en'] {
+  display: none !important;
+}
+html[data-active-lang='en'] [data-lang='ja'] {
+  display: none !important;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 0.14em 0.48em;
+  border-radius: 7px;
+  background: rgba(0, 146, 179, 0.09);
+  border: 1px solid rgba(0, 146, 179, 0.2);
+  color: var(--accent-ocean-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-ocean);
+  outline-offset: 3px;
+}
+
+/* Skip Link for Keyboard Accessibility */
+.skip-link {
+  position: fixed;
+  top: -80px;
+  left: 16px;
+  z-index: 200;
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--sea-deep);
+  color: #ffffff;
+  font-weight: 800;
+  transition: top 0.2s var(--ease-out);
+}
+.skip-link:focus {
+  top: 14px;
+}
+
+/* Atmospheric Sun & Sea Horizon Light Layers (Pure CSS, no literal motifs) */
+.bg-atmosphere {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bg-sun-halo {
+  position: absolute;
+  width: 680px;
+  height: 680px;
+  top: -280px;
+  right: -140px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 252, 235, 0.95) 0%,
+    rgba(254, 243, 199, 0.45) 36%,
+    rgba(186, 230, 253, 0) 72%
+  );
+}
+
+.bg-sea-mist {
+  position: absolute;
+  width: 780px;
+  height: 540px;
+  top: 26%;
+  left: -240px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(45, 212, 191, 0.16) 0%,
+    rgba(56, 189, 248, 0.09) 45%,
+    rgba(255, 255, 255, 0) 75%
+  );
+  filter: blur(24px);
+}
+
+main,
+header,
+footer {
+  position: relative;
+  z-index: 1;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.section {
+  padding: 84px 0;
+}
+
+.section-lagoon {
+  background: linear-gradient(
+    180deg,
+    rgba(224, 246, 252, 0.72) 0%,
+    rgba(238, 250, 252, 0.85) 55%,
+    rgba(252, 251, 247, 0.95) 100%
+  );
+}
+
+.section-sand {
+  background: linear-gradient(
+    180deg,
+    var(--sand-light) 0%,
+    var(--sand-warm) 100%
+  );
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 34px;
+}
+
+.section-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--accent-ocean);
+  margin-bottom: 6px;
+}
+
+.section-title {
+  font-size: clamp(1.65rem, 3vw, 2.3rem);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  color: var(--sea-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

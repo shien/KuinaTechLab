@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>5秒迷路 — MEIRO 5SEC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;800&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Full-screen non-blocking pickup celebration layer -->
+  <div id="screenFx" class="screen-fx" aria-hidden="true">
+    <div class="screen-fx-vignette"></div>
+    <div class="screen-fx-sweep"></div>
+    <div class="screen-fx-corners"></div>
+  </div>
+
+  <div id="app" class="app-shell">
+    <!-- Top HUD -->
+    <header class="hud">
+      <div class="hud-left">
+        <span id="hudDiffBadge" class="diff-pill diff-normal mono">NORMAL</span>
+        <div class="hud-chip stage-chip">
+          <span class="chip-label">STAGE</span>
+          <span id="stageNum" class="chip-value mono">01/10</span>
+          <span id="gridBadge" class="grid-badge mono">4×4</span>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <div class="timer-row">
+          <span id="timerText" class="timer-value mono">5.00<span class="timer-unit">s</span></span>
+          <span id="bonusCarryBadge" class="bonus-carry-badge hidden">+0s</span>
+        </div>
+        <div class="timer-bar-track" aria-label="残り時間">
+          <div id="timerBarFill" class="timer-bar-fill"></div>
+          <div id="timerBarBonus" class="timer-bar-bonus"></div>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <div class="hud-chip score-chip" title="現在のスコアとランク">
+          <span id="liveRankEmoji" class="live-rank-emoji">🐌</span>
+          <div class="score-meta">
+            <span id="liveRankName" class="live-rank-name">カタツムリ</span>
+            <span id="scoreText" class="score-value mono">0 pt</span>
+          </div>
+        </div>
+        <button id="btnRanksHud" class="icon-btn" type="button" aria-label="ランク一覧" title="ランク一覧">
+          🏆
+        </button>
+        <button id="btnFullscreen" class="icon-btn hidden" type="button" aria-label="フルスクリーン切替" title="フルスクリーン切替（誤戻る防止）">
+          ⛶
+        </button>
+        <button id="btnSound" class="icon-btn" type="button" aria-label="サウンド切替" title="サウンド切替">
+          🔊
+        </button>
+      </div>
+    </header>
+
+    <!-- Dedicated Toast / Guidance Slot Above Maze (never overlaps board) -->
+    <div class="toast-slot" aria-live="polite">
+      <div id="canvasToast" class="canvas-toast hidden"></div>
+    </div>
+
+    <!-- Main Maze Board -->
+    <main class="arena-wrap">
+      <div id="boardFrame" class="board-frame">
+        <canvas id="mazeCanvas" aria-label="迷路キャンバス"></canvas>
+
+        <!-- Non-blocking Stage Clear Banner -->
+        <div id="clearBanner" class="clear-banner hidden" aria-live="polite">
+          <div class="clear-title">CLEAR!</div>
+          <div id="clearPoints" class="clear-points mono">+200 pt</div>
+          <div id="clearBonus" class="clear-bonus hidden">⏳ NEXT +2秒 BONUS!</div>
+        </div>
+
+        <!-- Peek-back button when inspecting failed maze -->
+        <button id="btnBackToResult" class="peek-return-btn hidden" type="button">
+          結果画面に戻る
+        </button>
+      </div>
+    </main>
+
+    <!-- Bottom Contextual Bar -->
+    <footer class="bottom-bar">
+      <div class="status-pills-group">
+        <div id="itemStatusPill" class="item-status-pill">
+          <span class="status-dot"></span>
+          <span id="itemStatusText">別ルートに時間延長アイテムが落ちています</span>
+        </div>
+        <div id="healStatusPill" class="heal-status-pill hidden">
+          <span class="status-diamond"></span>
+          <span id="healStatusText">今回回復 ◆×1</span>
+        </div>
+      </div>
+      <div class="control-hint">
+        左クリック押しっぱなし／指でなぞって <strong class="c-start">S</strong> → <strong class="c-goal">G</strong>（離すと線が消えます）
+      </div>
+    </footer>
+
+    <!-- Title Overlay -->
+    <section id="titleModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titleHeading">
+      <div class="modal-card title-card">
+        <div class="title-eyebrow mono">5-SECOND SPEED MAZE</div>
+        <h1 id="titleHeading" class="game-title">
+          <span class="title-num">5秒</span>迷路
+        </h1>
+        <p class="game-subtitle">指とマウスの反射神経で、カタツムリから「光」を目指せ。</p>
+
+        <div class="rules-grid">
+          <div class="rule-item">
+            <div class="rule-icon">⏱️</div>
+            <div class="rule-body">
+              <div class="rule-title">制限時間 5秒</div>
+              <div class="rule-desc">1問ごとに迷路が難しくなる。時間切れで即終了！</div>
+            </div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-icon">✍️</div>
+            <div class="rule-body">
+              <div class="rule-title">押しっぱなしで一筆描き</div>
+              <div class="rule-desc">左クリック長押し・指タッチで移動。離すと線は消える！</div>
+            </div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-icon">⏳</div>
+            <div class="rule-body">
+              <div class="rule-title">2種類の時間アイテム（+1〜3秒）</div>
+              <div class="rule-desc">
+                <strong class="c-next">● 金バッジ</strong>は別ルートにあり<strong>次の迷路を延長</strong>。
+                4問目から増える<strong class="c-heal">◆ 緑ダイヤ</strong>は触れると<strong>今回の時間を即時回復</strong>！
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="difficulty-picker" role="radiogroup" aria-label="難易度選択">
+          <button id="btnDiffNormal" class="diff-card active" type="button" data-difficulty="normal" aria-pressed="true">
+            <div class="diff-card-top">
+              <span class="diff-card-name">ノーマル</span>
+              <span class="diff-card-tag mono">NORMAL</span>
+            </div>
+            <div class="diff-card-desc">全10問・最終ステージは 🖥️ スーパーコンピュータ級</div>
+          </button>
+          <button id="btnDiffHard" class="diff-card" type="button" data-difficulty="hard" aria-pressed="false">
+            <div class="diff-card-top">
+              <span class="diff-card-name">ハード</span>
+              <span class="diff-card-tag mono">HARD</span>
+            </div>
+            <div class="diff-card-desc">エンドレス・限界突破で ✨「光」を目指す（従来の難易度）</div>
+          </button>
+        </div>
+
+        <div id="titleBestBox" class="best-box hidden">
+          <span class="best-label">BEST RECORD</span>
+          <span id="titleBestValue" class="best-value"></span>
+        </div>
+
+        <div class="modal-actions">
+          <button id="btnStart" class="btn-primary" type="button">
+            <span id="btnStartLabel">ノーマルで挑戦する</span>
+            <span class="btn-key mono">SPACE</span>
+          </button>
+          <button id="btnTitleRanks" class="btn-secondary" type="button">
+            🏆 評価ランク一覧（カタツムリ〜光）
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Game Over / Result Modal -->
+    <section id="resultModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="resultHeading">
+      <div class="modal-card result-card">
+        <div class="result-header">
+          <div class="result-badges-left">
+            <span id="resultStatusBadge" class="timeup-badge mono">TIME UP — GAME OVER</span>
+            <span id="resultDiffBadge" class="result-diff-badge diff-normal">難易度：ノーマル</span>
+          </div>
+          <span id="newRecordBadge" class="new-record-badge hidden">NEW RECORD!</span>
+        </div>
+
+        <div id="rankShowcase" class="rank-showcase">
+          <div id="resultRankEmoji" class="rank-big-emoji">🐌</div>
+          <div class="rank-text-group">
+            <div class="rank-caption">あなたの評価ランク</div>
+            <h2 id="resultHeading" class="rank-big-name">カタツムリ</h2>
+            <div id="resultRankEn" class="rank-en mono">SNAIL</div>
+            <p id="resultRankComment" class="rank-comment"></p>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-box">
+            <span class="stat-label">SCORE</span>
+            <span id="resultScore" class="stat-val mono">0 pt</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">CLEAR</span>
+            <span id="resultCleared" class="stat-val mono">0 問</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">ITEMS</span>
+            <span id="resultItems" class="stat-val mono">0 個</span>
+          </div>
+        </div>
+
+        <div id="nextRankHint" class="next-rank-hint"></div>
+
+        <div class="mini-ladder-wrap">
+          <div class="mini-ladder-title">評価階級（最低 カタツムリ → 最高 光）</div>
+          <div id="resultLadder" class="mini-ladder"></div>
+        </div>
+
+        <div class="modal-actions result-actions">
+          <button id="btnRetry" class="btn-primary" type="button">
+            <span id="btnRetryLabel">もう一度挑戦</span>
+            <span class="btn-key mono">SPACE</span>
+          </button>
+          <button id="btnPeekMaze" class="btn-secondary" type="button">
+            🗺️ 正解ルートを見る
+          </button>
+        </div>
+        <button id="btnSwitchDifficulty" class="btn-switch-diff" type="button">
+          🔥 ハードモードに挑戦する
+        </button>
+      </div>
+    </section>
+
+    <!-- Rank Encyclopedia Modal -->
+    <section id="ranksModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="ranksHeading">
+      <div class="modal-card ranks-card">
+        <div class="ranks-modal-header">
+          <div>
+            <h2 id="ranksHeading" class="ranks-modal-title">評価ランク一覧</h2>
+            <p class="ranks-modal-sub">スコアに応じてカタツムリから「光」まで12段階で評価されます</p>
+          </div>
+          <button id="btnCloseRanks" class="icon-btn" type="button" aria-label="閉じる">✕</button>
+        </div>
+        <div id="ranksList" class="ranks-list"></div>
+      </div>
+    </section>
+  </div>
+
+  <script defer src="ranks.js"></script>
+  <script defer src="audio.js"></script>
+  <script defer src="maze.js"></script>
+  <script defer src="game.js"></script>
+</body>
+</html>
