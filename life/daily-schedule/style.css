@@ -312,6 +312,9 @@ button {
 
 .workspace-layout.is-kid-mode {
   grid-template-columns: 1fr;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .workspace-layout.is-kid-mode .picker-panel,
@@ -398,8 +401,8 @@ button {
 }
 
 .workspace-layout.is-kid-mode .cards-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 14px;
 }
 
@@ -445,19 +448,29 @@ button {
   color: var(--done-accent);
 }
 
-/* Kid-mode big visual tile layout */
+/* Kid-mode big single-column visual card layout */
 .workspace-layout.is-kid-mode .sched-card {
-  grid-template-columns: 1fr;
-  justify-items: center;
-  text-align: center;
-  padding: 18px 14px;
-  gap: 10px;
+  grid-template-columns: auto 108px minmax(0, 1fr);
+  align-items: center;
+  text-align: left;
+  padding: 16px 20px;
+  gap: 16px;
   cursor: pointer;
 }
 
+.workspace-layout.is-kid-mode .check-btn {
+  width: 54px;
+  height: 54px;
+  font-size: 1.6rem;
+}
+
 .workspace-layout.is-kid-mode .sched-img {
-  width: 118px;
-  height: 118px;
+  width: 108px;
+  height: 108px;
+}
+
+.workspace-layout.is-kid-mode .sched-label {
+  font-size: clamp(1.3rem, 2.8vw, 1.55rem);
 }
 
 .workspace-layout.is-kid-mode .sched-time-edit {
@@ -466,6 +479,7 @@ button {
 
 .workspace-layout.is-kid-mode .sched-time-display {
   display: inline-block;
+  font-size: 1.08rem;
 }
 
 .check-btn {
@@ -513,10 +527,6 @@ button {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-}
-
-.workspace-layout.is-kid-mode .sched-top-row {
-  justify-content: center;
 }
 
 .sched-time-display {
@@ -836,6 +846,19 @@ button {
   .sched-img {
     width: 66px;
     height: 66px;
+  }
+  .workspace-layout.is-kid-mode .sched-card {
+    grid-template-columns: auto 84px minmax(0, 1fr);
+    padding: 12px 14px;
+    gap: 12px;
+  }
+  .workspace-layout.is-kid-mode .sched-img {
+    width: 84px;
+    height: 84px;
+  }
+  .workspace-layout.is-kid-mode .check-btn {
+    width: 46px;
+    height: 46px;
   }
 }
 
