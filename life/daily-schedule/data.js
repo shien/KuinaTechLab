@@ -57,6 +57,20 @@
       defaultTimes: { morning: '08:00', afternoon: '13:30', evening: '20:15' }
     },
     {
+      id: 'leave',
+      label: 'いってきます',
+      image: 'images/leave.png',
+      periods: ['morning', 'afternoon'],
+      defaultTimes: { morning: '08:05', afternoon: '13:30', evening: '17:00' }
+    },
+    {
+      id: 'return',
+      label: 'ただいま',
+      image: 'images/return.png',
+      periods: ['afternoon', 'evening'],
+      defaultTimes: { morning: '11:30', afternoon: '15:00', evening: '17:20' }
+    },
+    {
       id: 'school',
       label: 'がっこう',
       image: 'images/school.png',
@@ -142,21 +156,21 @@
       label: 'あさ',
       sub: 'Morning',
       icon: '🌅',
-      recommended: ['wakeup', 'toilet', 'wash', 'dress', 'meal', 'brush', 'ready', 'school', 'outing']
+      recommended: ['wakeup', 'toilet', 'wash', 'dress', 'meal', 'brush', 'ready', 'leave', 'school', 'outing']
     },
     {
       id: 'afternoon',
       label: 'ひる',
       sub: 'Daytime',
       icon: '☀️',
-      recommended: ['meal', 'school', 'dayservice', 'outing', 'wash', 'snack', 'homework', 'ipad', 'play', 'tidy']
+      recommended: ['meal', 'school', 'dayservice', 'outing', 'leave', 'return', 'wash', 'snack', 'homework', 'ipad', 'play', 'tidy']
     },
     {
       id: 'evening',
       label: 'ゆうがた・よる',
       sub: 'Evening',
       icon: '🌙',
-      recommended: ['dayservice', 'wash', 'bath', 'meal', 'ipad', 'homework', 'tidy', 'brush', 'book', 'toilet', 'sleep']
+      recommended: ['dayservice', 'return', 'wash', 'bath', 'meal', 'ipad', 'homework', 'tidy', 'brush', 'book', 'toilet', 'sleep']
     }
   ];
 

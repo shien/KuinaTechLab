@@ -151,7 +151,7 @@
         "sourceDir": "life/daily-schedule"
       },
       "metrics": [
-        { "value": "18 CARDS", "labelJa": "イラスト行動カード", "labelEn": "Illustrated Cards" },
+        { "value": "20 CARDS", "labelJa": "イラスト行動カード", "labelEn": "Illustrated Cards" },
         { "value": "あさ・ひる・よる", "labelJa": "時間帯おすすめ表示", "labelEn": "Time-of-Day Picker" },
         { "value": "PRINT OK", "labelJa": "時間入力＆印刷対応", "labelEn": "Time Input & Print" }
       ]

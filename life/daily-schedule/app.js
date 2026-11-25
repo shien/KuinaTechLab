@@ -377,7 +377,7 @@
     });
 
     dom.pickerSectionTitle.textContent = state.showAllCards
-      ? 'すべての カード（18しゅるい）'
+      ? 'すべての カード（' + ACTIVITIES.length + 'しゅるい）'
       : periodObj.icon + ' ' + periodObj.label + ' の おすすめ';
     dom.btnToggleAllCards.textContent = state.showAllCards ? 'おすすめ だけ' : 'ぜんぶ みる';
 
