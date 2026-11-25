@@ -169,7 +169,8 @@
 
     // Find first incomplete item in morning -> afternoon -> evening order
     const ordered = getOrderedItems();
-    const nextItem = ordered.find(function (i) { return !i.done; }) || null;
+    const nextIdx = ordered.findIndex(function (i) { return !i.done; });
+    const nextItem = nextIdx !== -1 ? ordered[nextIdx] : null;
     const tagEl = dom.nextCallout.querySelector('.next-tag');
 
     if (total === 0) {
@@ -187,7 +188,7 @@
     } else {
       const act = getActivityById(nextItem.activityId);
       dom.nextCallout.classList.remove('all-done');
-      tagEl.textContent = '👉 つぎは これ！';
+      tagEl.textContent = '👉 つぎは ' + (nextIdx + 1) + 'ばん！';
       dom.nextImg.src = act.image;
       dom.nextTime.textContent = nextItem.time ? formatDisplayTime(nextItem.time) : 'つぎの こうどう';
       dom.nextLabel.textContent = nextItem.label;
@@ -210,6 +211,7 @@
   function renderBoard() {
     const nextUid = renderStatusStrip();
     const items = currentList();
+    let seqNum = 0;
 
     PERIODS.forEach(function (p) {
       const container = dom.lists[p.id];
@@ -228,6 +230,8 @@
       }
 
       periodItems.forEach(function (item, localIdx) {
+        seqNum += 1;
+        const stepNumber = seqNum;
         const act = getActivityById(item.activityId);
         const card = document.createElement('article');
         card.className =
@@ -235,6 +239,12 @@
           (item.done ? ' is-done' : '') +
           (item.uid === nextUid ? ' is-next' : '');
         card.setAttribute('data-uid', item.uid);
+
+        // Sequential step number badge
+        const numBadge = document.createElement('div');
+        numBadge.className = 'step-num mono';
+        numBadge.textContent = String(stepNumber);
+        numBadge.setAttribute('aria-label', stepNumber + 'ばんめ');
 
         // Check button
         const checkBtn = document.createElement('button');
@@ -352,6 +362,7 @@
           }
         });
 
+        card.appendChild(numBadge);
         card.appendChild(checkBtn);
         card.appendChild(img);
         card.appendChild(main);

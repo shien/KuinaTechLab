@@ -419,15 +419,41 @@ button {
 .sched-card {
   position: relative;
   display: grid;
-  grid-template-columns: auto 84px minmax(0, 1fr) auto;
+  grid-template-columns: auto auto 84px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  gap: 11px;
   padding: 12px 14px;
   border-radius: 20px;
   background: #ffffff;
   border: 2px solid rgba(24, 50, 68, 0.1);
   box-shadow: 0 5px 14px rgba(15, 68, 96, 0.06);
   transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.step-num {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: #5b7c92;
+  flex-shrink: 0;
+}
+
+.period-morning .step-num {
+  background: var(--morning-accent);
+}
+.period-afternoon .step-num {
+  background: var(--afternoon-accent);
+}
+.period-evening .step-num {
+  background: var(--evening-accent);
+}
+.sched-card.is-done .step-num {
+  background: #22c55e;
 }
 
 .sched-card.is-next {
@@ -450,12 +476,18 @@ button {
 
 /* Kid-mode big single-column visual card layout */
 .workspace-layout.is-kid-mode .sched-card {
-  grid-template-columns: auto 108px minmax(0, 1fr);
+  grid-template-columns: auto auto 108px minmax(0, 1fr);
   align-items: center;
   text-align: left;
   padding: 16px 20px;
-  gap: 16px;
+  gap: 14px;
   cursor: pointer;
+}
+
+.workspace-layout.is-kid-mode .step-num {
+  width: 42px;
+  height: 42px;
+  font-size: 1.16rem;
 }
 
 .workspace-layout.is-kid-mode .check-btn {
@@ -839,26 +871,36 @@ button {
 
 @media (max-width: 560px) {
   .sched-card {
-    grid-template-columns: auto 66px minmax(0, 1fr) auto;
-    padding: 10px;
-    gap: 9px;
+    grid-template-columns: auto auto 62px minmax(0, 1fr) auto;
+    padding: 10px 8px;
+    gap: 7px;
+  }
+  .step-num {
+    width: 28px;
+    height: 28px;
+    font-size: 0.84rem;
   }
   .sched-img {
-    width: 66px;
-    height: 66px;
+    width: 62px;
+    height: 62px;
   }
   .workspace-layout.is-kid-mode .sched-card {
-    grid-template-columns: auto 84px minmax(0, 1fr);
-    padding: 12px 14px;
-    gap: 12px;
+    grid-template-columns: auto auto 80px minmax(0, 1fr);
+    padding: 12px 12px;
+    gap: 10px;
+  }
+  .workspace-layout.is-kid-mode .step-num {
+    width: 34px;
+    height: 34px;
+    font-size: 0.98rem;
   }
   .workspace-layout.is-kid-mode .sched-img {
-    width: 84px;
-    height: 84px;
+    width: 80px;
+    height: 80px;
   }
   .workspace-layout.is-kid-mode .check-btn {
-    width: 46px;
-    height: 46px;
+    width: 44px;
+    height: 44px;
   }
 }
 
