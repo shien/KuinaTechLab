@@ -432,14 +432,26 @@
   }
 
   function resizeCanvases() {
-    const rect = dom.paperFrame.getBoundingClientRect();
-    const size = Math.max(220, Math.floor(Math.min(rect.width, rect.height)));
-    state.cssSize = size;
+    const stage = dom.paperFrame.parentElement;
+    const stageRect = stage ? stage.getBoundingClientRect() : dom.paperFrame.getBoundingClientRect();
+    const maxAllowed = 760;
+    const side = Math.max(
+      140,
+      Math.floor(Math.min(stageRect.width, stageRect.height, maxAllowed))
+    );
+
+    // Explicitly lock paperFrame to an exact square that fits both width and height
+    dom.paperFrame.style.width = side + 'px';
+    dom.paperFrame.style.height = side + 'px';
+
+    // Measure actual inner content box (excluding 4px border on each side)
+    const innerSize = Math.max(160, Math.floor(dom.paperFrame.clientWidth || side - 8));
+    state.cssSize = innerSize;
     state.dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     [dom.guideCanvas, dom.drawCanvas].forEach(function (c) {
-      c.width = Math.round(size * state.dpr);
-      c.height = Math.round(size * state.dpr);
+      c.width = Math.round(innerSize * state.dpr);
+      c.height = Math.round(innerSize * state.dpr);
     });
 
     renderGuideCanvas();
@@ -819,6 +831,15 @@
     });
 
     window.addEventListener('resize', resizeCanvases);
+    window.addEventListener('orientationchange', function () {
+      setTimeout(resizeCanvases, 120);
+    });
+    if (typeof ResizeObserver === 'function' && dom.paperFrame.parentElement) {
+      const ro = new ResizeObserver(function () {
+        resizeCanvases();
+      });
+      ro.observe(dom.paperFrame.parentElement);
+    }
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !dom.settingsModal.classList.contains('hidden')) {
         closeSettings();
