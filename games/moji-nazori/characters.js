@@ -213,19 +213,25 @@
 
     const poolSeries = activeSeries.length > 0 ? activeSeries : SERIES;
 
-    // 作品ごとに均等に出やすいようにまず作品を選び、その中からキャラを選ぶ
-    let chosenSeries = poolSeries[0];
-    let rawHira = chosenSeries.characters[0];
+    // 各作品のキャラクター数に比例した出現比率になるよう、全対象キャラをフラットに展開して抽選
+    const weightedPool = [];
+    for (let s = 0; s < poolSeries.length; s++) {
+      const series = poolSeries[s];
+      for (let c = 0; c < series.characters.length; c++) {
+        weightedPool.push({ series: series, rawHira: series.characters[c] });
+      }
+    }
+
+    let chosenSeries = weightedPool[0].series;
+    let rawHira = weightedPool[0].rawHira;
     let script = 'hiragana';
     let displayName = rawHira;
     let targetIndex = 0;
 
     for (let attempt = 0; attempt < 8; attempt++) {
-      chosenSeries = poolSeries[Math.floor(Math.random() * poolSeries.length)];
-      rawHira =
-        chosenSeries.characters[
-          Math.floor(Math.random() * chosenSeries.characters.length)
-        ];
+      const picked = weightedPool[Math.floor(Math.random() * weightedPool.length)];
+      chosenSeries = picked.series;
+      rawHira = picked.rawHira;
 
       if (scriptMode === 'hiragana') {
         script = 'hiragana';

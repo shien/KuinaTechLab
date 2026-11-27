@@ -12,33 +12,37 @@
 </head>
 <body>
   <div class="app-shell">
-    <!-- Top Warm Bar -->
+    <!-- Top Warm Header: Title top-left, icons on the row underneath -->
     <header class="top-bar">
-      <div class="top-left">
+      <div class="top-title-row">
         <span class="app-badge" aria-hidden="true">✏️</span>
         <h1 class="app-title">もじなぞり</h1>
       </div>
 
-      <div class="top-center">
+      <div class="top-icons-row">
         <div class="hanamaru-counter" aria-live="polite" title="できたかず">
           <span class="counter-icon" aria-hidden="true">💮</span>
           <span class="counter-label">できた</span>
           <span id="doneCount" class="counter-num">0</span>
         </div>
-      </div>
 
-      <div class="top-right">
-        <button id="btnSpeak" class="tool-btn" type="button" aria-label="なまえをよみあげる" title="なまえをきく">
-          <span aria-hidden="true">🗣️</span>
-          <span class="tool-btn-text">きく</span>
-        </button>
-        <button id="btnSound" class="tool-btn icon-only" type="button" aria-label="おとのオンオフ" title="おと">
-          🔊
-        </button>
-        <button id="btnSettings" class="tool-btn" type="button" aria-label="せってい" aria-haspopup="dialog">
-          <span aria-hidden="true">⚙️</span>
-          <span class="tool-btn-text">せってい</span>
-        </button>
+        <div class="top-tool-group">
+          <button id="btnPlayStroke" class="tool-btn" type="button" aria-label="かきじゅんをみる" title="かきじゅんをみる">
+            <span aria-hidden="true">▶️</span>
+            <span class="tool-btn-text">かきじゅん</span>
+          </button>
+          <button id="btnSpeak" class="tool-btn" type="button" aria-label="なまえをよみあげる" title="なまえをきく">
+            <span aria-hidden="true">🗣️</span>
+            <span class="tool-btn-text">きく</span>
+          </button>
+          <button id="btnSound" class="tool-btn icon-only" type="button" aria-label="おとのオンオフ" title="おと">
+            🔊
+          </button>
+          <button id="btnSettings" class="tool-btn" type="button" aria-label="せってい" aria-haspopup="dialog" title="せってい">
+            <span aria-hidden="true">⚙️</span>
+            <span class="tool-btn-text">せってい</span>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -47,20 +51,22 @@
       <div class="prompt-meta">
         <span id="seriesFromBadge" class="series-from">ポケモン より</span>
         <span id="scriptBadge" class="script-badge">ひらがな</span>
-        <span id="pencilOnlyBadge" class="pencil-badge hidden">✏️ ペンだけモード</span>
+        <span id="strokeCountBadge" class="stroke-count-badge">3かく</span>
+        <span id="pencilOnlyBadge" class="pencil-badge hidden">✏️ ペンだけ</span>
       </div>
       <div id="charNameRow" class="char-name-row" aria-live="polite"></div>
       <p id="promptGuidance" class="prompt-guidance">
-        おれんじ の <strong id="targetCharInline">ぴ</strong> を なぞってみよう！
+        おれんじ の <strong id="targetCharInline">ぴ</strong> を <span id="nextStrokeHint">① から</span> なぞってみよう！
       </p>
     </section>
 
     <!-- Main Oversized Tracing Square -->
     <main class="board-stage">
       <div id="paperFrame" class="paper-frame">
-        <!-- Guide & Drawing Canvas -->
+        <!-- Guide, Drawing & Stroke Animation Canvases -->
         <canvas id="guideCanvas" class="trace-canvas guide-canvas" aria-hidden="true"></canvas>
         <canvas id="drawCanvas" class="trace-canvas draw-canvas" aria-label="もじを なぞる キャンバス"></canvas>
+        <canvas id="animCanvas" class="trace-canvas anim-canvas" aria-hidden="true"></canvas>
 
         <!-- Gentle Encouraging Toast (never blocks drawing) -->
         <div id="softToast" class="soft-toast hidden" aria-live="polite"></div>
@@ -69,7 +75,6 @@
         <div id="hanamaruOverlay" class="hanamaru-overlay hidden" aria-live="polite">
           <div class="hanamaru-card">
             <svg class="hanamaru-svg" viewBox="0 0 180 180" aria-hidden="true">
-              <!-- Outer scalloped flower ring -->
               <path
                 class="hm-petals"
                 d="M90 14 C102 6 118 14 120 28 C134 24 148 36 144 50 C158 52 166 68 158 80 C170 90 168 108 156 116 C164 130 154 146 140 146 C140 160 124 170 112 162 C104 174 84 174 76 162 C62 170 46 160 46 146 C32 146 22 130 30 116 C18 108 16 90 28 80 C20 68 28 52 42 50 C38 36 52 24 66 28 C68 14 80 6 90 14 Z"
@@ -79,7 +84,6 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
               />
-              <!-- Inner spiral swirl -->
               <path
                 class="hm-swirl"
                 d="M92 48 C118 48 134 66 132 92 C130 118 108 134 84 130 C62 126 50 106 54 86 C58 68 74 58 92 62 C108 66 116 80 112 96 C108 108 94 114 82 110 C74 106 70 96 74 88 C78 82 86 80 92 84"
@@ -99,7 +103,7 @@
       </div>
     </main>
 
-    <!-- Bottom Kid-Friendly Controls -->
+    <!-- Bottom Kid-Friendly Controls (Large できた! button, subtle つぎへ button) -->
     <footer class="bottom-controls">
       <div class="crayon-palette" role="group" aria-label="ぺんの いろ">
         <button type="button" class="crayon-dot is-active" data-color="#4a2e1b" style="--dot: #4a2e1b;" aria-label="ちゃいろ" aria-pressed="true"></button>
@@ -111,23 +115,25 @@
       </div>
 
       <div class="action-group">
-        <button id="btnClear" class="action-btn btn-soft" type="button">
-          <span aria-hidden="true">🧽</span>
-          <span>けす</span>
-        </button>
         <button id="btnCheck" class="action-btn btn-hanamaru" type="button">
           <span aria-hidden="true">💮</span>
           <span>できた！</span>
         </button>
-        <button id="btnNext" class="action-btn btn-warm-primary" type="button">
-          <span>つぎへ</span>
-          <span aria-hidden="true">→</span>
-        </button>
+        <div class="sub-action-row">
+          <button id="btnClear" class="action-btn btn-soft" type="button">
+            <span aria-hidden="true">🧽</span>
+            <span>けす</span>
+          </button>
+          <button id="btnNext" class="action-btn btn-subtle-next" type="button">
+            <span>つぎへ</span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
       </div>
     </footer>
   </div>
 
-  <!-- Settings Modal (For Parents / Teachers & Kids) -->
+  <!-- Settings Modal -->
   <div id="settingsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settingsHeading">
     <div class="modal-card">
       <div class="modal-head">
@@ -160,6 +166,16 @@
 
       <div class="setting-block">
         <label class="toggle-row">
+          <input id="chkStrokeOrder" type="checkbox" checked />
+          <span>
+            <strong>かきじゅん（①②③）を ひょうじする</strong>
+            <small>かく じゅんばん の ばんごう と やじるし を だします</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="setting-block">
+        <label class="toggle-row">
           <input id="chkPencilOnly" type="checkbox" />
           <span>
             <strong>Apple Pencil（ペン）だけで かく</strong>
@@ -175,6 +191,7 @@
   </div>
 
   <script defer src="characters.js"></script>
+  <script defer src="stroke-order.js"></script>
   <script defer src="audio.js"></script>
   <script defer src="app.js"></script>
 </body>

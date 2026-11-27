@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const { SERIES, pickQuestion, WarmSound } = global.MojiNazori;
+  const { SERIES, pickQuestion, getStrokeOrder, WarmSound } = global.MojiNazori;
   const sound = new WarmSound();
 
   const STORAGE_DONE_KEY = 'moji_nazori_done_v1';
@@ -15,22 +15,28 @@
     'やったね！ だいせいこう！'
   ];
 
+  const CIRCLED_NUMS = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧'];
+
   // DOM References
   const dom = {
     doneCount: document.getElementById('doneCount'),
+    btnPlayStroke: document.getElementById('btnPlayStroke'),
     btnSpeak: document.getElementById('btnSpeak'),
     btnSound: document.getElementById('btnSound'),
     btnSettings: document.getElementById('btnSettings'),
 
     seriesFromBadge: document.getElementById('seriesFromBadge'),
     scriptBadge: document.getElementById('scriptBadge'),
+    strokeCountBadge: document.getElementById('strokeCountBadge'),
     pencilOnlyBadge: document.getElementById('pencilOnlyBadge'),
     charNameRow: document.getElementById('charNameRow'),
     targetCharInline: document.getElementById('targetCharInline'),
+    nextStrokeHint: document.getElementById('nextStrokeHint'),
 
     paperFrame: document.getElementById('paperFrame'),
     guideCanvas: document.getElementById('guideCanvas'),
     drawCanvas: document.getElementById('drawCanvas'),
+    animCanvas: document.getElementById('animCanvas'),
     softToast: document.getElementById('softToast'),
 
     hanamaruOverlay: document.getElementById('hanamaruOverlay'),
@@ -46,11 +52,13 @@
     btnCloseSettings: document.getElementById('btnCloseSettings'),
     btnApplySettings: document.getElementById('btnApplySettings'),
     seriesChips: document.getElementById('seriesChips'),
+    chkStrokeOrder: document.getElementById('chkStrokeOrder'),
     chkPencilOnly: document.getElementById('chkPencilOnly')
   };
 
   const guideCtx = dom.guideCanvas.getContext('2d');
   const drawCtx = dom.drawCanvas.getContext('2d');
+  const animCtx = dom.animCanvas.getContext('2d');
 
   // Offscreen sampling canvas for gentle tracing progress check
   const sampleCanvas = document.createElement('canvas');
@@ -64,20 +72,26 @@
     scriptMode: 'random', // 'random' | 'hiragana' | 'katakana'
     seriesFilter: 'all',
     guideAlpha: 0.30,
+    showStrokeOrder: true,
     pencilOnly: false,
     penColor: '#4a2e1b',
 
     question: null,
+    strokeOrder: [], // array of strokes from stroke-order.js
     cssSize: 420,
     dpr: Math.min(window.devicePixelRatio || 1, 2),
 
-    // Pointer drawing state (supports Finger, Apple Pencil with pressure, Mouse)
+    // Pointer drawing state
     isDrawing: false,
     activePointerId: null,
-    strokes: [], // array of stroke point lists: [{x, y, w}, ...]
+    strokes: [],
     currentStroke: null,
 
-    // Target character sampled guide points (in normalized 0..1 coordinates)
+    // Stroke order demo animation state
+    animRafId: null,
+    animRunning: false,
+
+    // Target character sampled guide points
     guidePoints: [],
     coveredFlags: [],
     coverageRatio: 0,
@@ -101,6 +115,9 @@
         if (typeof p.guideAlpha === 'number' && p.guideAlpha >= 0.1 && p.guideAlpha <= 0.6) {
           state.guideAlpha = p.guideAlpha;
         }
+        if (typeof p.showStrokeOrder === 'boolean') {
+          state.showStrokeOrder = p.showStrokeOrder;
+        }
         if (typeof p.pencilOnly === 'boolean') {
           state.pencilOnly = p.pencilOnly;
         }
@@ -122,6 +139,7 @@
           scriptMode: state.scriptMode,
           seriesFilter: state.seriesFilter,
           guideAlpha: state.guideAlpha,
+          showStrokeOrder: state.showStrokeOrder,
           pencilOnly: state.pencilOnly
         })
       );
@@ -134,6 +152,22 @@
     dom.pencilOnlyBadge.classList.toggle('hidden', !state.pencilOnly);
     if (!('speechSynthesis' in window)) {
       dom.btnSpeak.classList.add('hidden');
+    }
+  }
+
+  function updateStrokeHintText() {
+    const total = state.strokeOrder.length;
+    if (!dom.nextStrokeHint) return;
+    if (!state.showStrokeOrder || total === 0) {
+      dom.nextStrokeHint.textContent = 'ゆっくり';
+      return;
+    }
+    const nextIdx = state.strokes.length;
+    if (nextIdx < total) {
+      const numLabel = CIRCLED_NUMS[nextIdx] || (nextIdx + 1) + 'かくめ';
+      dom.nextStrokeHint.textContent = numLabel + ' から';
+    } else {
+      dom.nextStrokeHint.textContent = 'ぜんぶ かいたら できた！をおしてね —';
     }
   }
 
@@ -160,7 +194,6 @@
     } catch (_) {}
   }
 
-  // Build huge textbook-style character font string
   function getTraceFont(pxSize) {
     return (
       '600 ' +
@@ -169,7 +202,6 @@
     );
   }
 
-  // Sample target character pixels on offscreen canvas so we know where the strokes lie
   function buildGuideSamples(char) {
     sampleCtx.clearRect(0, 0, SAMPLE_SIZE, SAMPLE_SIZE);
     sampleCtx.fillStyle = '#000000';
@@ -180,7 +212,7 @@
 
     const img = sampleCtx.getImageData(0, 0, SAMPLE_SIZE, SAMPLE_SIZE).data;
     const pts = [];
-    const STEP = 4; // downsample grid for fast hit checks
+    const STEP = 4;
 
     for (let y = STEP; y < SAMPLE_SIZE; y += STEP) {
       for (let x = STEP; x < SAMPLE_SIZE; x += STEP) {
@@ -198,7 +230,6 @@
 
   function markCoverageAt(normX, normY) {
     if (!state.guidePoints.length) return;
-    // Generous kid-friendly hit radius (~8.5% of box size)
     const radiusSq = 0.085 * 0.085;
     let covered = 0;
 
@@ -216,10 +247,89 @@
     }
 
     state.coverageRatio = covered / state.guidePoints.length;
-    dom.btnCheck.classList.toggle('is-ready', state.coverageRatio >= 0.58 && !state.celebratedForCurrent);
+    dom.btnCheck.classList.toggle('is-ready', state.coverageRatio >= 0.55 && !state.celebratedForCurrent);
   }
 
-  // Render notebook cross-guides + oversized model character
+  // Draw stroke order numbers (1, 2, 3...) + subtle directional arrows
+  function drawStrokeOrderOverlay(ctx, size) {
+    if (!state.showStrokeOrder || !state.strokeOrder || state.strokeOrder.length === 0) return;
+
+    const currentIdx = state.strokes.length;
+    const baseRadius = Math.max(11, Math.min(18, size * 0.036));
+
+    // Slight nudge when two stroke starts are very close so badges never collide
+    const placed = [];
+
+    for (let i = 0; i < state.strokeOrder.length; i++) {
+      const pts = state.strokeOrder[i];
+      if (!pts || pts.length < 2) continue;
+
+      const isCurrent = i === currentIdx;
+      const isDone = i < currentIdx;
+
+      let sx = pts[0][0] * size;
+      let sy = pts[0][1] * size;
+      const nx = pts[1][0] * size;
+      const ny = pts[1][1] * size;
+      const angle = Math.atan2(ny - sy, nx - sx);
+
+      // Avoid badge overlap with earlier stroke badges
+      for (let p = 0; p < placed.length; p++) {
+        const dx = sx - placed[p].x;
+        const dy = sy - placed[p].y;
+        const minGap = baseRadius * 2.15;
+        if (dx * dx + dy * dy < minGap * minGap) {
+          sx += Math.cos(angle + Math.PI * 0.5) * (baseRadius * 1.45);
+          sy += Math.sin(angle + Math.PI * 0.5) * (baseRadius * 1.45);
+        }
+      }
+      placed.push({ x: sx, y: sy });
+
+      // Short direction arrow from start toward second point
+      const arrowLen = Math.max(18, size * 0.068);
+      const ax1 = pts[0][0] * size + Math.cos(angle) * (baseRadius * 0.9);
+      const ay1 = pts[0][1] * size + Math.sin(angle) * (baseRadius * 0.9);
+      const ax2 = pts[0][0] * size + Math.cos(angle) * (baseRadius * 0.9 + arrowLen);
+      const ay2 = pts[0][1] * size + Math.sin(angle) * (baseRadius * 0.9 + arrowLen);
+
+      ctx.save();
+      ctx.strokeStyle = isCurrent
+        ? 'rgba(234, 88, 12, 0.88)'
+        : isDone
+          ? 'rgba(180, 140, 110, 0.35)'
+          : 'rgba(234, 88, 12, 0.48)';
+      ctx.lineWidth = isCurrent ? Math.max(3, size * 0.008) : Math.max(2, size * 0.0055);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(ax1, ay1);
+      ctx.lineTo(ax2, ay2);
+      // Arrowhead
+      const head = Math.max(6, size * 0.018);
+      ctx.lineTo(ax2 - head * Math.cos(angle - 0.55), ay2 - head * Math.sin(angle - 0.55));
+      ctx.moveTo(ax2, ay2);
+      ctx.lineTo(ax2 - head * Math.cos(angle + 0.55), ay2 - head * Math.sin(angle + 0.55));
+      ctx.stroke();
+
+      // Number circle badge
+      const r = isCurrent ? baseRadius * 1.16 : baseRadius * 0.96;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fillStyle = isCurrent ? '#ef4444' : isDone ? '#e7d5c5' : '#fb923c';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fffdf9';
+      ctx.stroke();
+
+      // Number text
+      ctx.fillStyle = isDone ? '#8a6b52' : '#ffffff';
+      ctx.font = '800 ' + Math.round(r * 1.2) + 'px "M PLUS Rounded 1c", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(i + 1), sx, sy + 0.5);
+      ctx.restore();
+    }
+  }
+
   function renderGuideCanvas() {
     const size = state.cssSize;
     const dpr = state.dpr;
@@ -246,7 +356,7 @@
     guideCtx.stroke();
     guideCtx.restore();
 
-    // Very large, crisp traceable model character (~78% of the square!)
+    // Very large traceable model character (~78% of the square)
     if (state.question) {
       guideCtx.save();
       guideCtx.textAlign = 'center';
@@ -255,17 +365,123 @@
       guideCtx.fillStyle = 'rgba(130, 88, 56, ' + state.guideAlpha + ')';
       guideCtx.fillText(state.question.targetChar, size * 0.5, size * 0.52);
 
-      // Faint soft outline to make stroke edges extra clear for young children
       guideCtx.lineWidth = Math.max(1.5, size * 0.004);
       guideCtx.strokeStyle = 'rgba(194, 120, 68, ' + Math.min(0.45, state.guideAlpha + 0.12) + ')';
       guideCtx.strokeText(state.question.targetChar, size * 0.5, size * 0.52);
       guideCtx.restore();
+
+      drawStrokeOrderOverlay(guideCtx, size);
     }
 
     guideCtx.restore();
   }
 
-  // Re-render all child strokes cleanly (preserves drawings across resizes)
+  // Animated Stroke-Order Playback on animCanvas
+  function stopStrokeAnimation() {
+    if (state.animRafId) {
+      cancelAnimationFrame(state.animRafId);
+      state.animRafId = null;
+    }
+    state.animRunning = false;
+    const size = state.cssSize;
+    animCtx.save();
+    animCtx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+    animCtx.clearRect(0, 0, size, size);
+    animCtx.restore();
+  }
+
+  function playStrokeAnimation() {
+    if (!state.strokeOrder || state.strokeOrder.length === 0) return;
+    stopStrokeAnimation();
+    state.animRunning = true;
+    sound.playPop();
+
+    const strokes = state.strokeOrder;
+    const strokeDurationMs = 700;
+    const pauseMs = 240;
+    const perStrokeMs = strokeDurationMs + pauseMs;
+    const totalMs = strokes.length * perStrokeMs + 350;
+    const startTs = performance.now();
+
+    function samplePolyline(pts, t) {
+      if (pts.length === 1) return { x: pts[0][0], y: pts[0][1] };
+      const segs = [];
+      let totalLen = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const dx = pts[i][0] - pts[i - 1][0];
+        const dy = pts[i][1] - pts[i - 1][1];
+        const len = Math.hypot(dx, dy);
+        segs.push(len);
+        totalLen += len;
+      }
+      if (totalLen === 0) return { x: pts[0][0], y: pts[0][1] };
+      let target = Math.max(0, Math.min(1, t)) * totalLen;
+      for (let i = 0; i < segs.length; i++) {
+        if (target <= segs[i] || i === segs.length - 1) {
+          const frac = segs[i] > 0 ? target / segs[i] : 0;
+          return {
+            x: pts[i][0] + (pts[i + 1][0] - pts[i][0]) * frac,
+            y: pts[i][1] + (pts[i + 1][1] - pts[i][1]) * frac
+          };
+        }
+        target -= segs[i];
+      }
+      const last = pts[pts.length - 1];
+      return { x: last[0], y: last[1] };
+    }
+
+    function frame(now) {
+      if (!state.animRunning) return;
+      const elapsed = now - startTs;
+      if (elapsed >= totalMs) {
+        stopStrokeAnimation();
+        return;
+      }
+
+      const size = state.cssSize;
+      animCtx.save();
+      animCtx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+      animCtx.clearRect(0, 0, size, size);
+
+      const activeStrokeIdx = Math.min(strokes.length - 1, Math.floor(elapsed / perStrokeMs));
+      const inStrokeElapsed = elapsed - activeStrokeIdx * perStrokeMs;
+      const strokeT = Math.min(1, inStrokeElapsed / strokeDurationMs);
+
+      // Draw completed + in-progress strokes in warm translucent orange
+      for (let s = 0; s <= activeStrokeIdx; s++) {
+        const pts = strokes[s];
+        const limitT = s < activeStrokeIdx ? 1 : strokeT;
+        const steps = 28;
+        animCtx.beginPath();
+        for (let k = 0; k <= steps; k++) {
+          const p = samplePolyline(pts, (k / steps) * limitT);
+          if (k === 0) animCtx.moveTo(p.x * size, p.y * size);
+          else animCtx.lineTo(p.x * size, p.y * size);
+        }
+        animCtx.strokeStyle = s === activeStrokeIdx ? 'rgba(249, 115, 22, 0.72)' : 'rgba(249, 115, 22, 0.32)';
+        animCtx.lineWidth = Math.max(10, size * 0.038);
+        animCtx.lineCap = 'round';
+        animCtx.lineJoin = 'round';
+        animCtx.stroke();
+      }
+
+      // Moving bright dot showing pen tip
+      const head = samplePolyline(strokes[activeStrokeIdx], strokeT);
+      animCtx.beginPath();
+      animCtx.arc(head.x * size, head.y * size, Math.max(10, size * 0.032), 0, Math.PI * 2);
+      animCtx.fillStyle = '#ef4444';
+      animCtx.fill();
+      animCtx.lineWidth = 3;
+      animCtx.strokeStyle = '#ffffff';
+      animCtx.stroke();
+
+      animCtx.restore();
+      state.animRafId = requestAnimationFrame(frame);
+    }
+
+    state.animRafId = requestAnimationFrame(frame);
+  }
+
   function renderDrawCanvas() {
     const size = state.cssSize;
     const dpr = state.dpr;
@@ -274,8 +490,7 @@
     drawCtx.clearRect(0, 0, size, size);
 
     for (let s = 0; s < state.strokes.length; s++) {
-      const stroke = state.strokes[s];
-      drawSingleStroke(stroke, size);
+      drawSingleStroke(state.strokes[s], size);
     }
 
     drawCtx.restore();
@@ -298,7 +513,6 @@
       return;
     }
 
-    // Smooth quadratic midpoint segments with pressure-aware stroke width
     for (let i = 1; i < pts.length; i++) {
       const pPrev = pts[i - 1];
       const pCurr = pts[i];
@@ -320,7 +534,6 @@
       drawCtx.stroke();
     }
 
-    // Final tip
     const last = pts[pts.length - 1];
     const prev = pts[pts.length - 2];
     drawCtx.lineWidth = Math.max(6, last.nw * size);
@@ -336,7 +549,7 @@
     state.cssSize = size;
     state.dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    [dom.guideCanvas, dom.drawCanvas].forEach(function (c) {
+    [dom.guideCanvas, dom.drawCanvas, dom.animCanvas].forEach(function (c) {
       c.width = Math.round(size * state.dpr);
       c.height = Math.round(size * state.dpr);
     });
@@ -346,6 +559,7 @@
   }
 
   function clearDrawing(playSound) {
+    stopStrokeAnimation();
     state.strokes = [];
     state.currentStroke = null;
     state.isDrawing = false;
@@ -355,24 +569,34 @@
     state.coverageRatio = 0;
     dom.btnCheck.classList.remove('is-ready');
     dom.hanamaruOverlay.classList.add('hidden');
+    updateStrokeHintText();
+    renderGuideCanvas();
     renderDrawCanvas();
     if (playSound) sound.playErase();
   }
 
   function loadNewQuestion(playSound) {
+    stopStrokeAnimation();
     const q = pickQuestion({
       scriptMode: state.scriptMode,
       seriesFilter: state.seriesFilter,
       lastKey: state.question ? state.question.key : ''
     });
     state.question = q;
+    state.strokeOrder = typeof getStrokeOrder === 'function' ? getStrokeOrder(q.targetChar) : [];
 
-    // Update series "（作品名）より" & script badge
     dom.seriesFromBadge.textContent = q.fromText;
     dom.scriptBadge.textContent = q.scriptLabel;
     dom.scriptBadge.classList.toggle('is-katakana', q.script === 'katakana');
+    if (dom.strokeCountBadge) {
+      if (state.strokeOrder.length > 0) {
+        dom.strokeCountBadge.textContent = state.strokeOrder.length + 'かく';
+        dom.strokeCountBadge.classList.remove('hidden');
+      } else {
+        dom.strokeCountBadge.classList.add('hidden');
+      }
+    }
 
-    // Render character name tiles with the target letter highlighted
     dom.charNameRow.innerHTML = '';
     q.chars.forEach(function (ch, idx) {
       const span = document.createElement('span');
@@ -388,20 +612,18 @@
 
     buildGuideSamples(q.targetChar);
     clearDrawing(false);
-    renderGuideCanvas();
 
     if (playSound) sound.playNext();
   }
 
   function triggerHanamaru() {
+    stopStrokeAnimation();
     if (state.strokes.length === 0) {
       sound.playEncourage();
       showSoftToast('まずは ゆび や ぺん で なぞってみよう！');
       return;
     }
 
-    // Gentle threshold for early elementary kids: even a decent attempt gets praised,
-    // only ask for a little more if barely touched (< 32%).
     if (state.coverageRatio < 0.32) {
       sound.playEncourage();
       showSoftToast('もう少し おてほん の うえを なぞってみよう！');
@@ -419,7 +641,6 @@
     dom.praiseText.textContent =
       PRAISE_MESSAGES[Math.floor(Math.random() * PRAISE_MESSAGES.length)];
 
-    // Restart SVG hanamaru stroke animation cleanly
     dom.hanamaruOverlay.classList.add('hidden');
     void dom.hanamaruOverlay.offsetWidth;
     dom.hanamaruOverlay.classList.remove('hidden');
@@ -427,13 +648,11 @@
     sound.playHanamaru();
   }
 
-  // Pointer helpers (Apple Pencil / Finger / Mouse)
   function getNormalizedPoint(e) {
     const rect = dom.drawCanvas.getBoundingClientRect();
     const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
 
-    // Kid-friendly bold brush width (~4.8% of canvas); responsive to Apple Pencil pressure
     let baseWidth = 0.048;
     if (e.pointerType === 'pen' && typeof e.pressure === 'number' && e.pressure > 0) {
       const clamped = Math.max(0.25, Math.min(1, e.pressure));
@@ -464,6 +683,7 @@
     e.preventDefault();
     if (state.isDrawing) return;
 
+    stopStrokeAnimation();
     state.isDrawing = true;
     state.activePointerId = e.pointerId;
     try {
@@ -486,7 +706,6 @@
     }
     e.preventDefault();
 
-    // Use high-frequency coalesced events for buttery Apple Pencil smoothness
     const events =
       typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [e];
     const list = events && events.length > 0 ? events : [e];
@@ -515,6 +734,9 @@
     state.isDrawing = false;
     state.activePointerId = null;
     state.currentStroke = null;
+    // Highlight the next stroke number after finishing this stroke
+    updateStrokeHintText();
+    renderGuideCanvas();
   }
 
   // Settings Modal Wiring
@@ -532,7 +754,7 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'setting-chip' + (state.seriesFilter === s.id ? ' is-active' : '');
-      btn.textContent = s.label;
+      btn.textContent = s.label + '（' + s.characters.length + '）';
       btn.setAttribute('data-series', s.id);
       dom.seriesChips.appendChild(btn);
     });
@@ -558,6 +780,7 @@
       );
     });
 
+    dom.chkStrokeOrder.checked = state.showStrokeOrder;
     dom.chkPencilOnly.checked = state.pencilOnly;
   }
 
@@ -571,13 +794,11 @@
   }
 
   function initEvents() {
-    // Canvas pointer listeners
     dom.drawCanvas.addEventListener('pointerdown', onPointerDown, { passive: false });
     dom.drawCanvas.addEventListener('pointermove', onPointerMove, { passive: false });
     dom.drawCanvas.addEventListener('pointerup', endStroke);
     dom.drawCanvas.addEventListener('pointercancel', endStroke);
 
-    // Prevent iOS Safari bounce / gesture zoom on canvas
     dom.drawCanvas.addEventListener(
       'touchstart',
       function (e) {
@@ -586,7 +807,6 @@
       { passive: false }
     );
 
-    // Crayon colors
     document.querySelectorAll('.crayon-dot').forEach(function (dot) {
       dot.addEventListener('click', function () {
         state.penColor = dot.getAttribute('data-color') || '#4a2e1b';
@@ -599,7 +819,8 @@
       });
     });
 
-    // Main action buttons
+    dom.btnPlayStroke.addEventListener('click', playStrokeAnimation);
+
     dom.btnClear.addEventListener('click', function () {
       clearDrawing(true);
     });
@@ -628,7 +849,6 @@
       if (!sound.muted) sound.playPop();
     });
 
-    // Settings modal
     dom.btnSettings.addEventListener('click', openSettings);
     dom.btnCloseSettings.addEventListener('click', closeSettings);
     dom.btnApplySettings.addEventListener('click', closeSettings);
@@ -664,6 +884,14 @@
       loadNewQuestion(true);
     });
 
+    dom.chkStrokeOrder.addEventListener('change', function () {
+      state.showStrokeOrder = dom.chkStrokeOrder.checked;
+      savePrefs();
+      updateStrokeHintText();
+      renderGuideCanvas();
+      sound.playPop();
+    });
+
     dom.chkPencilOnly.addEventListener('change', function () {
       state.pencilOnly = dom.chkPencilOnly.checked;
       savePrefs();
@@ -687,7 +915,6 @@
     resizeCanvases();
     loadNewQuestion(false);
 
-    // Re-render guide character once Google Font "Klee One" finishes loading
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(function () {
         if (state.question) {
