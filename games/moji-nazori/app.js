@@ -20,7 +20,6 @@
   // DOM References
   const dom = {
     doneCount: document.getElementById('doneCount'),
-    btnPlayStroke: document.getElementById('btnPlayStroke'),
     btnSpeak: document.getElementById('btnSpeak'),
     btnSound: document.getElementById('btnSound'),
     btnSettings: document.getElementById('btnSettings'),
@@ -32,11 +31,11 @@
     charNameRow: document.getElementById('charNameRow'),
     targetCharInline: document.getElementById('targetCharInline'),
     nextStrokeHint: document.getElementById('nextStrokeHint'),
+    charImageSearchLink: document.getElementById('charImageSearchLink'),
 
     paperFrame: document.getElementById('paperFrame'),
     guideCanvas: document.getElementById('guideCanvas'),
     drawCanvas: document.getElementById('drawCanvas'),
-    animCanvas: document.getElementById('animCanvas'),
     softToast: document.getElementById('softToast'),
 
     hanamaruOverlay: document.getElementById('hanamaruOverlay'),
@@ -58,7 +57,6 @@
 
   const guideCtx = dom.guideCanvas.getContext('2d');
   const drawCtx = dom.drawCanvas.getContext('2d');
-  const animCtx = dom.animCanvas.getContext('2d');
 
   // Offscreen sampling canvas for gentle tracing progress check
   const sampleCanvas = document.createElement('canvas');
@@ -86,10 +84,6 @@
     activePointerId: null,
     strokes: [],
     currentStroke: null,
-
-    // Stroke order demo animation state
-    animRafId: null,
-    animRunning: false,
 
     // Target character sampled guide points
     guidePoints: [],
@@ -376,115 +370,6 @@
     guideCtx.restore();
   }
 
-  // Animated Stroke-Order Playback on animCanvas
-  function stopStrokeAnimation() {
-    if (state.animRafId) {
-      cancelAnimationFrame(state.animRafId);
-      state.animRafId = null;
-    }
-    state.animRunning = false;
-    const size = state.cssSize;
-    animCtx.save();
-    animCtx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
-    animCtx.clearRect(0, 0, size, size);
-    animCtx.restore();
-  }
-
-  function playStrokeAnimation() {
-    if (!state.strokeOrder || state.strokeOrder.length === 0) return;
-    stopStrokeAnimation();
-    state.animRunning = true;
-    sound.playPop();
-
-    const strokes = state.strokeOrder;
-    const strokeDurationMs = 700;
-    const pauseMs = 240;
-    const perStrokeMs = strokeDurationMs + pauseMs;
-    const totalMs = strokes.length * perStrokeMs + 350;
-    const startTs = performance.now();
-
-    function samplePolyline(pts, t) {
-      if (pts.length === 1) return { x: pts[0][0], y: pts[0][1] };
-      const segs = [];
-      let totalLen = 0;
-      for (let i = 1; i < pts.length; i++) {
-        const dx = pts[i][0] - pts[i - 1][0];
-        const dy = pts[i][1] - pts[i - 1][1];
-        const len = Math.hypot(dx, dy);
-        segs.push(len);
-        totalLen += len;
-      }
-      if (totalLen === 0) return { x: pts[0][0], y: pts[0][1] };
-      let target = Math.max(0, Math.min(1, t)) * totalLen;
-      for (let i = 0; i < segs.length; i++) {
-        if (target <= segs[i] || i === segs.length - 1) {
-          const frac = segs[i] > 0 ? target / segs[i] : 0;
-          return {
-            x: pts[i][0] + (pts[i + 1][0] - pts[i][0]) * frac,
-            y: pts[i][1] + (pts[i + 1][1] - pts[i][1]) * frac
-          };
-        }
-        target -= segs[i];
-      }
-      const last = pts[pts.length - 1];
-      return { x: last[0], y: last[1] };
-    }
-
-    function frame(now) {
-      if (!state.animRunning) return;
-      const elapsed = Math.max(0, now - startTs);
-      if (elapsed >= totalMs) {
-        stopStrokeAnimation();
-        return;
-      }
-
-      const size = state.cssSize;
-      animCtx.save();
-      animCtx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
-      animCtx.clearRect(0, 0, size, size);
-
-      const activeStrokeIdx = Math.max(
-        0,
-        Math.min(strokes.length - 1, Math.floor(elapsed / perStrokeMs))
-      );
-      const inStrokeElapsed = Math.max(0, elapsed - activeStrokeIdx * perStrokeMs);
-      const strokeT = Math.max(0, Math.min(1, inStrokeElapsed / strokeDurationMs));
-
-      // Draw completed + in-progress strokes in warm translucent orange
-      for (let s = 0; s <= activeStrokeIdx; s++) {
-        const pts = strokes[s];
-        const limitT = s < activeStrokeIdx ? 1 : strokeT;
-        const steps = 28;
-        animCtx.beginPath();
-        for (let k = 0; k <= steps; k++) {
-          const p = samplePolyline(pts, (k / steps) * limitT);
-          if (k === 0) animCtx.moveTo(p.x * size, p.y * size);
-          else animCtx.lineTo(p.x * size, p.y * size);
-        }
-        animCtx.strokeStyle = s === activeStrokeIdx ? 'rgba(249, 115, 22, 0.72)' : 'rgba(249, 115, 22, 0.32)';
-        animCtx.lineWidth = Math.max(10, size * 0.038);
-        animCtx.lineCap = 'round';
-        animCtx.lineJoin = 'round';
-        animCtx.stroke();
-      }
-
-      // Moving bright dot showing pen tip
-      const head = samplePolyline(strokes[activeStrokeIdx], strokeT);
-      animCtx.beginPath();
-      animCtx.arc(head.x * size, head.y * size, Math.max(10, size * 0.032), 0, Math.PI * 2);
-      animCtx.fillStyle = '#ef4444';
-      animCtx.fill();
-      animCtx.lineWidth = 3;
-      animCtx.strokeStyle = '#ffffff';
-      animCtx.stroke();
-
-      animCtx.restore();
-      state.animRafId = requestAnimationFrame(frame);
-    }
-
-    state.animRafId = requestAnimationFrame(frame);
-  }
-
   function renderDrawCanvas() {
     const size = state.cssSize;
     const dpr = state.dpr;
@@ -552,7 +437,7 @@
     state.cssSize = size;
     state.dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    [dom.guideCanvas, dom.drawCanvas, dom.animCanvas].forEach(function (c) {
+    [dom.guideCanvas, dom.drawCanvas].forEach(function (c) {
       c.width = Math.round(size * state.dpr);
       c.height = Math.round(size * state.dpr);
     });
@@ -562,7 +447,6 @@
   }
 
   function clearDrawing(playSound) {
-    stopStrokeAnimation();
     state.strokes = [];
     state.currentStroke = null;
     state.isDrawing = false;
@@ -579,7 +463,6 @@
   }
 
   function loadNewQuestion(playSound) {
-    stopStrokeAnimation();
     const q = pickQuestion({
       scriptMode: state.scriptMode,
       seriesFilter: state.seriesFilter,
@@ -601,6 +484,7 @@
     }
 
     dom.charNameRow.innerHTML = '';
+    dom.charNameRow.style.setProperty('--name-len', String(Math.max(1, q.chars.length)));
     q.chars.forEach(function (ch, idx) {
       const span = document.createElement('span');
       span.className = idx === q.targetIndex ? 'name-char is-target' : 'name-char';
@@ -613,6 +497,17 @@
 
     dom.targetCharInline.textContent = q.targetChar;
 
+    if (dom.charImageSearchLink) {
+      const query = q.displayName + ' ' + q.seriesLabel + ' キャラクター';
+      dom.charImageSearchLink.href =
+        'https://www.google.com/search?tbm=isch&safe=active&q=' +
+        encodeURIComponent(query);
+      dom.charImageSearchLink.setAttribute(
+        'aria-label',
+        q.displayName + '（' + q.seriesLabel + '）の Google 画像検索を新しいタブでひらく'
+      );
+    }
+
     buildGuideSamples(q.targetChar);
     clearDrawing(false);
 
@@ -620,7 +515,6 @@
   }
 
   function triggerHanamaru() {
-    stopStrokeAnimation();
     if (state.strokes.length === 0) {
       sound.playEncourage();
       showSoftToast('まずは ゆび や ぺん で なぞってみよう！');
@@ -686,7 +580,6 @@
     e.preventDefault();
     if (state.isDrawing) return;
 
-    stopStrokeAnimation();
     state.isDrawing = true;
     state.activePointerId = e.pointerId;
     try {
@@ -822,8 +715,6 @@
       });
     });
 
-    dom.btnPlayStroke.addEventListener('click', playStrokeAnimation);
-
     dom.btnClear.addEventListener('click', function () {
       clearDrawing(true);
     });
@@ -845,6 +736,31 @@
     dom.btnSpeak.addEventListener('click', function () {
       speakCurrentName();
     });
+
+    if (dom.charImageSearchLink) {
+      dom.charImageSearchLink.addEventListener('click', function (e) {
+        const url = dom.charImageSearchLink.href;
+        if (!url) return;
+        const winW = Math.min(580, Math.max(380, Math.round(window.screen.availWidth * 0.42)));
+        const winH = Math.min(680, Math.max(460, Math.round(window.screen.availHeight * 0.72)));
+        const left = Math.max(20, Math.round((window.screen.availWidth - winW) * 0.85));
+        const top = Math.max(20, Math.round((window.screen.availHeight - winH) * 0.5));
+        const features =
+          'popup=yes,width=' + winW +
+          ',height=' + winH +
+          ',left=' + left +
+          ',top=' + top +
+          ',resizable=yes,scrollbars=yes';
+        const popup = window.open(url, 'mojiCharSearch', features);
+        if (popup) {
+          e.preventDefault();
+          try {
+            popup.opener = null;
+            popup.focus();
+          } catch (_) {}
+        }
+      });
+    }
 
     dom.btnSound.addEventListener('click', function () {
       sound.toggleMute();

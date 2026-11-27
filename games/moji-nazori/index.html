@@ -27,10 +27,6 @@
         </div>
 
         <div class="top-tool-group">
-          <button id="btnPlayStroke" class="tool-btn" type="button" aria-label="かきじゅんをみる" title="かきじゅんをみる">
-            <span aria-hidden="true">▶️</span>
-            <span class="tool-btn-text">かきじゅん</span>
-          </button>
           <button id="btnSpeak" class="tool-btn" type="button" aria-label="なまえをよみあげる" title="なまえをきく">
             <span aria-hidden="true">🗣️</span>
             <span class="tool-btn-text">きく</span>
@@ -58,15 +54,25 @@
       <p id="promptGuidance" class="prompt-guidance">
         おれんじ の <strong id="targetCharInline">ぴ</strong> を <span id="nextStrokeHint">① から</span> なぞってみよう！
       </p>
+      <a
+        id="charImageSearchLink"
+        class="char-search-link"
+        href="https://www.google.com/search?tbm=isch&amp;safe=active"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span aria-hidden="true">🖼️</span>
+        <span>どんな キャラかな？</span>
+        <span class="ext-arrow" aria-hidden="true">↗</span>
+      </a>
     </section>
 
     <!-- Main Oversized Tracing Square -->
     <main class="board-stage">
       <div id="paperFrame" class="paper-frame">
-        <!-- Guide, Drawing & Stroke Animation Canvases -->
+        <!-- Guide & Drawing Canvases -->
         <canvas id="guideCanvas" class="trace-canvas guide-canvas" aria-hidden="true"></canvas>
         <canvas id="drawCanvas" class="trace-canvas draw-canvas" aria-label="もじを なぞる キャンバス"></canvas>
-        <canvas id="animCanvas" class="trace-canvas anim-canvas" aria-hidden="true"></canvas>
 
         <!-- Gentle Encouraging Toast (never blocks drawing) -->
         <div id="softToast" class="soft-toast hidden" aria-live="polite"></div>

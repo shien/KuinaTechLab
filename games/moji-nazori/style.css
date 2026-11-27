@@ -274,9 +274,9 @@ button {
   min-width: 1.4em;
   padding: 3px 6px;
   border-radius: 12px;
-  font-family: var(--font-trace);
+  font-family: var(--font-ui);
   font-size: clamp(1.32rem, 3.2vw, 1.95rem);
-  font-weight: 600;
+  font-weight: 800;
   color: var(--text-main);
   background: rgba(255, 241, 224, 0.65);
   border: 2px solid transparent;
@@ -303,6 +303,33 @@ button {
   font-family: var(--font-trace);
   font-size: 1.18em;
   padding: 0 2px;
+}
+
+.char-search-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  background: #fff7eb;
+  border: 1.5px solid rgba(226, 156, 98, 0.55);
+  color: var(--text-sub);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.char-search-link:hover {
+  background: #ffedd5;
+  border-color: var(--warm-orange);
+  color: var(--text-main);
+  transform: translateY(-1px);
+}
+
+.char-search-link .ext-arrow {
+  font-size: 0.78em;
+  opacity: 0.8;
 }
 
 /* Main Oversized Tracing Stage */
@@ -339,8 +366,7 @@ button {
   display: block;
 }
 
-.guide-canvas,
-.anim-canvas {
+.guide-canvas {
   pointer-events: none;
 }
 
@@ -694,8 +720,29 @@ button {
   }
 
   .prompt-card {
+    container-type: inline-size;
     padding: 18px 16px;
     gap: 10px;
+  }
+
+  .char-name-row {
+    width: 100%;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    gap: clamp(2px, 1cqi, 5px);
+  }
+
+  .name-char {
+    min-width: 0;
+    flex: 0 1 auto;
+    padding: 4px clamp(2px, 1.1cqi, 7px);
+    font-family: var(--font-ui);
+    font-weight: 800;
+    font-size: clamp(0.95rem, calc(80cqi / var(--name-len, 6) * 0.68), 1.95rem);
+  }
+
+  .name-char.is-target {
+    transform: scale(1.08);
   }
 
   .bottom-controls {
