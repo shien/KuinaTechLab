@@ -432,7 +432,7 @@
 
     function frame(now) {
       if (!state.animRunning) return;
-      const elapsed = now - startTs;
+      const elapsed = Math.max(0, now - startTs);
       if (elapsed >= totalMs) {
         stopStrokeAnimation();
         return;
@@ -443,9 +443,12 @@
       animCtx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
       animCtx.clearRect(0, 0, size, size);
 
-      const activeStrokeIdx = Math.min(strokes.length - 1, Math.floor(elapsed / perStrokeMs));
-      const inStrokeElapsed = elapsed - activeStrokeIdx * perStrokeMs;
-      const strokeT = Math.min(1, inStrokeElapsed / strokeDurationMs);
+      const activeStrokeIdx = Math.max(
+        0,
+        Math.min(strokes.length - 1, Math.floor(elapsed / perStrokeMs))
+      );
+      const inStrokeElapsed = Math.max(0, elapsed - activeStrokeIdx * perStrokeMs);
+      const strokeT = Math.max(0, Math.min(1, inStrokeElapsed / strokeDurationMs));
 
       // Draw completed + in-progress strokes in warm translucent orange
       for (let s = 0; s <= activeStrokeIdx; s++) {
